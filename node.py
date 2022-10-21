@@ -31,7 +31,7 @@ def handle_client(conn, addr):
         msg = conn.recv(1024).decode(FORMAT)  # blocking. Receive 1024 bytes of message and decode it
         conn.recv(1024)  # overread new line character
 
-        if msg == b'':
+        if msg == "b''":
             continue
 
         print("Received: " + msg)
