@@ -4,6 +4,7 @@ from typing import Dict, TextIO
 from datetime import date, datetime
 
 import json
+import os.path
 
 # can be replaced by default logging from Python
 class Printer:
@@ -36,13 +37,23 @@ class PeerSaver:
     # handle file overwriting in a nice way
     def __init__(self, file_location: str) -> None:
         self.peers: Dict = {} 
-        self.file = open(file_location, 'r+')
+        self.file_location = file_location
 
     def load(self) -> None:
-        self.peers = json.loads(self.file.read())
+        if (not os.path.exists(self.file_location)):
+            with open(self.file_location, 'w') as file:
+                return
+        
+        with open(self.file_location, 'r') as file:
+            self.peers = json.loads(file.read())
+            print(self.peers)
 
     def save(self) -> None:
-        self.file.write(json.dumps(self.peers))
+        with open(self.file_location, 'w') as file:
+            file.write(json.dumps(self.peers))
+
+    def add_peer(self, peer) -> None:
+        self.peers.update(peer)
 
 # Make a public instance of printer such that it is visible across the whole implementation
 printer = Printer()
