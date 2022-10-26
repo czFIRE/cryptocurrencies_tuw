@@ -36,6 +36,9 @@ class Node:
         connectio = Connection(conn, addr)
         connectio.handle_client()
 
+    def peer_discovery(self, conn, addr) -> None:
+        pass
+
 
 # Reimplement this as such that this is a class that we run on startup
 # for each client startup connection that handles everything acompanied with it
