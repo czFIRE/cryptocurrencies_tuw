@@ -4,8 +4,8 @@ from socket import socket
 import sys
 import utils
 
-class Connection:
 
+class Connection:
     FORMAT = 'utf-8'
 
     def __init__(self, conn: socket, addr) -> None:
@@ -14,9 +14,9 @@ class Connection:
 
     def __del__(self) -> None:
         # close the connection when out of scope or destroyed
+        utils.printer.printout("Closing connection")
         self.conn.close()
 
-    
     def send_hello(self) -> bool:
         msg = json.dumps({  # Send the initial hello message
             "type": "hello",
@@ -25,13 +25,10 @@ class Connection:
         })
 
         message = msg.encode(self.FORMAT)
-        return (self.conn.send(message) == len(msg))
+        return self.conn.send(message) == len(msg)
 
     def receive_hello(self) -> bool:
-        keep_connection = True
-        hello_sent = False
-
-        while keep_connection:
+        while True:
             msg = self.conn.recv(1024).decode(self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
             self.conn.recv(1024)  # overread new line character
 
@@ -44,27 +41,23 @@ class Connection:
                 msg_json = json.loads(msg)
             except json.decoder.JSONDecodeError:
                 utils.printer.printout("[DISCONNECTING]: no valid json received: '" + msg + "'")
-                keep_connection = False
-                continue
+                self.send_error("No valid json received.")
+                return False
 
-            if not hello_sent:
-                if msg_json["type"] != "hello":
-                    utils.printer.printout("[DISCONNECTING]: no hello sent")
-                    keep_connection = False
-                    break
+            if msg_json["type"] != "hello":
+                utils.printer.printout("[DISCONNECTING]: no hello sent")
+                self.send_error("Sent no hello message at start of conversation.")
+                return False
 
-                # add part that checks if the version isn't like 0.8.aaa or 0.8 => check it with their implementation what's valid here
-                elif msg_json["version"][0:3] != "0.8":
-                    utils.printer.printout("[DISCONNECTING]: Wrong version " + msg_json["version"][0:3])
-                    keep_connection = False
-                    break
+            # If the version you receive differs from 0.8.x you must disconnect.
+            elif msg_json["version"][0:3] != "0.8" or len(msg_json["version"]) < 5:
+                utils.printer.printout("[DISCONNECTING]: Wrong version " + msg_json["version"][0:3])
+                self.send_error("Wrong protocol version")
+                return False
 
-                else:
-                    utils.printer.printout("Hello sent")
-                    hello_sent = True
-                    #break
-
-        return keep_connection
+            else:
+                utils.printer.printout("Hello sent")
+                return True
 
     def send_peers(self) -> bool:
         # TODO
@@ -72,16 +65,19 @@ class Connection:
 
     def receive_peers(self) -> bool:
         # TODO
-        return False   
+        return False
 
-    def send_error(self) -> None:
-        # TODO
-        pass
+    def send_error(self, error) -> None:
+        msg = json.dumps({
+            "type": "error",
+            "error ": error
+        })
+        message = msg.encode(self.FORMAT)
+        self.conn.send(message)
 
-    
     # Handle connection with one client
     def handle_client(self) -> None:
-        #TODO - add try catch for error with "connection ended by remote host"
+        # TODO - add try catch for error with "connection ended by remote host"
 
         utils.printer.printout(f"[NEW CONNECTION] {self.addr} connected.")
 
@@ -102,6 +98,5 @@ class Connection:
             return
 
         # Add part to send error msg if connection failed
-        #if (not keep_connection):
+        # if (not keep_connection):
         #    pass
-    

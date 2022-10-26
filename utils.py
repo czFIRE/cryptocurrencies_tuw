@@ -6,19 +6,20 @@ from datetime import date, datetime
 import json
 import os.path
 
+
 # can be replaced by default logging from Python
 class Printer:
     '''Class used for printing stuff either to a console or to a log file'''
     output_str: TextIO = stdout
 
     def __init__(self, output="") -> None:
-        if (output != ""):
+        if output != "":
             try:
-                 self.output_str = open(output, mode='at')
+                self.output_str = open(output, mode='at')
             except:
                 print("Can't open file for logging!")
                 exit(1)
-               
+
     def __del__(self) -> None:
         if (self.output_str != stdout):
             self.output_str.close()
@@ -31,19 +32,20 @@ class Printer:
         if (both and self.output_str != stdout):
             print(current_datetime + str(msg))
 
+
 class PeerSaver:
     '''Used for saving and loading discovered peers'''
 
     # handle file overwriting in a nice way
     def __init__(self, file_location: str) -> None:
-        self.peers: Dict = {} 
+        self.peers: Dict = {}
         self.file_location = file_location
 
     def load(self) -> None:
         if (not os.path.exists(self.file_location)):
             with open(self.file_location, 'w') as file:
                 return
-        
+
         with open(self.file_location, 'r') as file:
             self.peers = json.loads(file.read())
             print(self.peers)
@@ -54,6 +56,7 @@ class PeerSaver:
 
     def add_peer(self, peer) -> None:
         self.peers.update(peer)
+
 
 # Make a public instance of printer such that it is visible across the whole implementation
 printer = Printer()
