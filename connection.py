@@ -1,7 +1,5 @@
 import json
 from socket import socket
-
-import sys
 import utils
 
 
@@ -56,24 +54,36 @@ class Connection:
                 return False
 
             else:
-                utils.printer.printout("Hello sent")
+                utils.printer.printout("Hello received")
                 return True
 
+    def send_get_peers(self) -> bool:
+        return self.send_message({
+            "type": "getpeers"
+        })
+
     def send_peers(self) -> bool:
-        # TODO
-        return False
+        # TODO: read peers from file
+        return self.send_message({
+            "type": "peers",
+            "peers": []
+        })
 
     def receive_peers(self) -> bool:
         # TODO
         return False
 
-    def send_error(self, error) -> None:
-        msg = json.dumps({
+    def send_error(self, error) -> bool:
+        return self.send_message({
             "type": "error",
             "error ": error
         })
+
+    # Function that takes a json object and sends it to the client
+    def send_message(self, msg_json) -> bool:
+        msg = json.dumps(msg_json) + "\n"
         message = msg.encode(self.FORMAT)
-        self.conn.send(message)
+        return self.conn.send(message) == len(msg)
 
     # Handle connection with one client
     def handle_client(self) -> None:
@@ -81,19 +91,19 @@ class Connection:
 
         utils.printer.printout(f"[NEW CONNECTION] {self.addr} connected.")
 
-        if (not self.send_hello()):
+        if not self.send_hello():
             utils.printer.printout("Couldn't send the hello message!")
             return
 
-        if (not self.receive_hello()):
+        if not self.receive_hello():
             utils.printer.printout("Problem with getting hello")
             return
 
-        if (not self.send_peers()):
+        if not self.send_get_peers():
             utils.printer.printout("Couldn't send the peers message!")
             return
 
-        if (not self.receive_peers()):
+        if not self.receive_peers():
             utils.printer.printout("Problem with getting peers")
             return
 

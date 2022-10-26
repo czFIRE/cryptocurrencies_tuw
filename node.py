@@ -6,7 +6,7 @@ import utils
 
 
 class Node:
-    PORT = 18017
+    PORT = 18018
     SERVER = socket.gethostbyname('localhost')  # socket.gethostname()
     ADDR = (SERVER, PORT)
 
