@@ -1,6 +1,7 @@
 import json
 from socket import socket
 import utils
+import os
 
 
 class Connection:
@@ -44,7 +45,7 @@ class Connection:
         return self.send_message({  # Send the initial hello message
             "type": "hello",
             "version": "0.8.0",
-            "agent": "Kool_node_1"
+            "agent": os.getenv('NODE_NAME')
         })
 
     def receive_hello(self) -> bool:

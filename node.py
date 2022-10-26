@@ -1,12 +1,14 @@
 import socket
 import threading
-
+import os
+from dotenv import load_dotenv
 from connection import Connection
 import utils
 
 
 class Node:
-    PORT = 18018
+    load_dotenv()
+    PORT = int(os.getenv('PORT'))
     SERVER = socket.gethostbyname('localhost')  # socket.gethostname()
     ADDR = (SERVER, PORT)
 
