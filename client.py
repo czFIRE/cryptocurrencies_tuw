@@ -34,9 +34,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     byt = json_getPeers.encode('utf-8')
     utils.printer.printout("Sent: " + json_getPeers)
     s.send(byt)
-    data = s.recv(1024)
-
-    utils.printer.printout(f"Received {data!r}")
 
     while True:
-        pass
+        data = s.recv(1024)
+        utils.printer.printout(f"Received {data!r}")

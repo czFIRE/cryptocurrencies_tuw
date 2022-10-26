@@ -96,7 +96,7 @@ class Connection:
 
         utils.printer.printout(f"[NEW CONNECTION] {self.addr} connected.")
 
-        # Send and receive hello, send get peers
+        # Send hello and get_peers
         if not self.send_hello():
             utils.printer.printout("Couldn't send the hello message!")
             return
