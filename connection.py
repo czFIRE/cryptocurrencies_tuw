@@ -20,25 +20,30 @@ class Connection:
     def receive_msg(self):
         while True:
             msg = self.conn.recv(1024).decode(self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
-            self.conn.recv(1024)  # overread new line character
 
-            if msg == "b''":
+            if msg == "b''" or msg == "\n" or msg == "\r" or len(msg) == 0:
                 continue
 
-            utils.printer.printout("Received: " + msg)
+            incoming_msg_que = []
+            for i in msg.split("\n"):
+                if i == "b''" or i == "\r" or len(i) == 0 or i == "\n":
+                    continue
 
-            try:  # try decoding json message. Close connection if decoding error
-                msg_json = json.loads(msg)
-                return True, msg_json
-            except json.decoder.JSONDecodeError:
-                utils.printer.printout("No valid json received: '" + msg + "'")
-                self.send_error("No valid json received.")
-                return False, msg
+                utils.printer.printout("[RECEIVED]: " + i)
+
+                try:  # try decoding json message
+                    incoming_msg_que.append(json.loads(i))
+                except json.decoder.JSONDecodeError:
+                    utils.printer.printout("No valid json received: '" + i + "'")
+                    self.send_error("No valid json received.")
+
+            return incoming_msg_que
 
     # Function that takes a json object and sends it to the client
     def send_message(self, msg_json) -> bool:
         msg = json.dumps(msg_json) + "\n"
         message = msg.encode(self.FORMAT)
+        utils.printer.printout("[SENT] " + msg)
         return self.conn.send(message) == len(msg)
 
     def send_hello(self) -> bool:
@@ -48,12 +53,7 @@ class Connection:
             "agent": os.getenv('NODE_NAME')
         })
 
-    def receive_hello(self) -> bool:
-        success, msg_json = self.receive_msg()
-
-        if not success:
-            return False
-
+    def receive_hello(self, msg_json) -> bool:
         if msg_json["type"] != "hello":
             utils.printer.printout("[DISCONNECTING]: no hello sent")
             self.send_error("Sent no hello message at start of conversation.")
@@ -100,25 +100,29 @@ class Connection:
         if not self.send_hello():
             utils.printer.printout("Couldn't send the hello message!")
             return
-        if not self.receive_hello():
-            utils.printer.printout("Problem with getting hello")
-            return
         if not self.send_get_peers():
             utils.printer.printout("Couldn't send the get peers message!")
             return
 
+        hello_received = False
+
         # Loop trough new received messages
         while True:
-            success, msg_json = self.receive_msg()
+            msgs = self.receive_msg()
 
-            if not success:
-                continue
+            for i in msgs:
+                if not i["type"]:
+                    self.send_error("No valid message received")
 
-            if not msg_json["type"]:
-                self.send_error("No valid message received")
+                if i["type"] == "hello":
+                    hello_received = self.receive_hello(i)
 
-            if msg_json["type"] == "getpeers":
-                self.send_peers()
+                if not hello_received:
+                    self.send_error("Sent no hello message at start of conversation.")
+                    return
 
-            if msg_json["type"] == "peers":
-                self.receive_peers()
+                if i["type"] == "getpeers":
+                    self.send_peers()
+
+                if i["type"] == "peers":
+                    self.receive_peers()
