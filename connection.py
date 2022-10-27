@@ -1,5 +1,7 @@
 import json
 from socket import socket
+import string
+import time
 import utils
 import os
 
@@ -19,6 +21,7 @@ class Connection:
     # Function that waits for the next message, receives it, trys to decode it and returns it
     def receive_msg(self):
         while True:
+            time.sleep(0.15)
             msg = self.conn.recv(1024).decode(self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
 
             if msg == "b''" or msg == "\n" or msg == "\r" or len(msg) == 0:
@@ -50,7 +53,7 @@ class Connection:
         return self.send_message({  # Send the initial hello message
             "type": "hello",
             "version": "0.8.0",
-            "agent": os.getenv('NODE_NAME')
+            "agent": os.getenv('NODE_NAME', default="Cool_Node")
         })
 
     def receive_hello(self, msg_json) -> bool:
