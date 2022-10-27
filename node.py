@@ -8,7 +8,7 @@ import utils
 
 class Node:
     load_dotenv()
-    PORT = int(os.getenv('PORT'))
+    PORT = int(os.getenv('PORT', default=18018))
     SERVER = socket.gethostbyname('localhost')  # socket.gethostname()
     ADDR = (SERVER, PORT)
 
@@ -45,6 +45,6 @@ class Node:
 # remove global variables and have them as a part of the node class
 
 if __name__ == "__main__":
-    utils.printer.printout("[STARTING] server ist starting...")
+    utils.printer.printout("[STARTING] server is starting...")
     node = Node()
     node.start()
