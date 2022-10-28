@@ -1,6 +1,8 @@
 import socket
 import json
 import os
+import time
+
 from dotenv import load_dotenv
 
 import utils
@@ -24,12 +26,21 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
     s.connect((HOST, PORT))
 
-    byt = json_message.encode('utf-8')
-    utils.printer.printout("Sent: " + json_message)
+    part1 = json_message[0:15]
+    part2 = json_message[15:]
+
+    # split the message in two parts sent with 0.5 seconds time difference
+    byt = part1.encode('utf-8')
+    utils.printer.printout("Sent: " + str(byt))
     s.send(byt)
+    time.sleep(0.5)
+    byt = part2.encode('utf-8')
+    utils.printer.printout("Sent: " + str(byt))
+    s.send(byt)
+
     data = s.recv(1024)
 
-    utils.printer.printout(f"Received {data!r}")
+    utils.printer.printout(f"Received: {data!r}")
 
     byt = json_getPeers.encode('utf-8')
     utils.printer.printout("Sent: " + json_getPeers)
@@ -37,4 +48,4 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
     while True:
         data = s.recv(1024)
-        utils.printer.printout(f"Received {data!r}")
+        utils.printer.printout(f"Received: {data!r}")
