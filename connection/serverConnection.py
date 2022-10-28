@@ -1,6 +1,6 @@
 import utils
 
-from connection import Connection
+from connection.connection import Connection
 
 
 class ServerConnection(Connection):

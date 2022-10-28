@@ -2,7 +2,7 @@ import socket
 import threading
 import os
 from dotenv import load_dotenv
-from serverConnection import ServerConnection
+from connection.serverConnection import ServerConnection
 import utils
 
 
