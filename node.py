@@ -2,7 +2,7 @@ import socket
 import threading
 import os
 from dotenv import load_dotenv
-from connection import Connection
+from serverConnection import ServerConnection
 import utils
 
 
@@ -33,7 +33,7 @@ class Node:
                 f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")  # Main thread is always running, therefore substract 1
 
     def handle_connection(self, conn, addr) -> None:
-        connectio = Connection(conn, addr)
+        connectio = ServerConnection(conn, addr)
         connectio.handle_client()
 
     def peer_discovery(self, conn, addr) -> None:
@@ -41,7 +41,7 @@ class Node:
 
 
 # Reimplement this as such that this is a class that we run on startup
-# for each client startup connection that handles everything acompanied with it
+# for each client startup connection that handles everything accompanied by it
 # remove global variables and have them as a part of the node class
 
 if __name__ == "__main__":

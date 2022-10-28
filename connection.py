@@ -1,9 +1,9 @@
 import json
 from socket import socket
-import time
 import utils
 import os
 import time
+
 
 class Connection:
     FORMAT = 'utf-8'
@@ -31,7 +31,7 @@ class Connection:
             if msg[-1] != "\n":
                 utils.printer.printout("No newline at end of message. Waiting for the rest of the message")
                 start = time.time()
-                while time.time() - 30 < start and msg[-1] != "\n": # wait at most 30 seconds
+                while time.time() - 30 < start and msg[-1] != "\n":  # wait at most 30 seconds
                     msg += self.conn.recv(1024).decode(self.FORMAT)
                     utils.printer.printout("[RECEIVED] Msg extended to: " + msg)
 
@@ -99,39 +99,3 @@ class Connection:
             "type": "error",
             "error ": error
         })
-
-    def handle_client(self) -> None:
-        # TODO - add try catch for error with "connection ended by remote host" - why would we need this? -flo
-
-        utils.printer.printout(f"[NEW CONNECTION] {self.addr} connected.")
-
-        # Send hello and get_peers
-        if not self.send_hello():
-            utils.printer.printout("Couldn't send the hello message!")
-            return
-        if not self.send_get_peers():
-            utils.printer.printout("Couldn't send the get peers message!")
-            return
-
-        hello_received = False
-
-        # Loop trough new received messages
-        while True:
-            msgs = self.receive_msg()
-
-            for i in msgs:
-                if not i["type"]:
-                    self.send_error("No valid message received")
-
-                if i["type"] == "hello":
-                    hello_received = self.receive_hello(i)
-
-                if not hello_received:
-                    self.send_error("Sent no hello message at start of conversation.")
-                    return
-
-                if i["type"] == "getpeers":
-                    self.send_peers()
-
-                if i["type"] == "peers":
-                    self.receive_peers()
