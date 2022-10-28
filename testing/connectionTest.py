@@ -23,7 +23,8 @@ class ConnectionTest:
     # Function that waits for the next message, receives it, trys to decode it and returns it
     def receive_msg(self):
         while True:
-            msg = self.conn.recv(1024).decode(self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
+            time.sleep(0.25)
+            msg = self.conn.recv(2048).decode(self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
 
             if msg == "b''" or msg == "\n" or msg == "\r" or len(msg) == 0:
                 continue
@@ -92,8 +93,9 @@ class ConnectionTest:
             "type": "getpeers"
         })
 
-    def receive_peers(self) -> bool:
-        # TODO
+    def receive_peers(self, peerList) -> bool:
+        for i in peerList:
+            utils.printer.printout(i)
         return False
 
     def send_peers(self) -> bool:
@@ -154,4 +156,5 @@ class ConnectionTest:
                     self.conn.send(message_2)
 
                 if i["type"] == "peers":
-                    self.receive_peers()
+                    if i["peers"]:
+                        self.receive_peers(i["peers"])
