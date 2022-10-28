@@ -22,10 +22,10 @@ class Connection:
         while True:
             msg = self.conn.recv(1024).decode(self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
 
-            utils.printer.printout("[RECEIVED]: " + msg)
-
             if msg == "b''" or msg == "\n" or msg == "\r" or len(msg) == 0:
                 continue
+
+            utils.printer.printout("[RECEIVED]: " + msg)
 
             # If the message doesn't end with a newline character, wait for the rest of the message
             if msg[-1] != "\n":

@@ -8,7 +8,7 @@ from connection.connection import Connection
 class ServerConnection(Connection):
 
     def handle_client(self) -> None:
-        utils.printer.printout(f"[NEW CONNECTION] {self.addr} connected.")
+        utils.printer.printout(f"[NEW INCOMING CONNECTION] {self.addr} connected.")
 
         self.send_initial_messages()
         self.maintain_connection()

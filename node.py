@@ -3,6 +3,7 @@ import threading
 import os
 from dotenv import load_dotenv
 from connection.serverConnection import ServerConnection
+from connection.clientConnection import ClientConnection
 import utils
 
 
@@ -23,6 +24,7 @@ class Node:
         self.server.close()
 
     def start(self) -> None:
+        self.peer_discovery()
         self.server.listen()  # Listen to new connections
         while True:
             conn, addr = self.server.accept()  # blocking
@@ -36,8 +38,22 @@ class Node:
         connectio = ServerConnection(conn, addr)
         connectio.handle_client()
 
-    def peer_discovery(self, conn, addr) -> None:
-        pass
+    # Connect to all hardcoded peers
+    def peer_discovery(self) -> None:
+        # Bootstrapping node and 3 other random peers from tuwel
+        hardcoded_peers = [("128.130.122.101", 18018), ("139.59.206.226", 18018), ("138.68.112.193", 18018)]
+
+        for i in hardcoded_peers:
+            host = i[0]
+            port = i[1]
+            thread = threading.Thread(target=self.connect_to_peer, args=(host, port, None))
+            thread.start()
+
+    # Start a connection to the peer at the given host and port
+    def connect_to_peer(self, host: str, port: int, addr) -> None:
+        con = ClientConnection(host, port, addr)
+        con.start_client()
+
 
 
 # Reimplement this as such that this is a class that we run on startup
