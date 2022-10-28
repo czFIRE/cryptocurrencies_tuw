@@ -1,10 +1,9 @@
 import json
 from socket import socket
-import string
 import time
 import utils
 import os
-
+import time
 
 class Connection:
     FORMAT = 'utf-8'
@@ -21,18 +20,25 @@ class Connection:
     # Function that waits for the next message, receives it, trys to decode it and returns it
     def receive_msg(self):
         while True:
-            time.sleep(0.15)
             msg = self.conn.recv(1024).decode(self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
+
+            utils.printer.printout("[RECEIVED]: " + msg)
 
             if msg == "b''" or msg == "\n" or msg == "\r" or len(msg) == 0:
                 continue
+
+            # If the message doesn't end with a newline character, wait for the rest of the message
+            if msg[-1] != "\n":
+                utils.printer.printout("No newline at end of message. Waiting for the rest of the message")
+                start = time.time()
+                while time.time() - 30 < start and msg[-1] != "\n": # wait at most 30 seconds
+                    msg += self.conn.recv(1024).decode(self.FORMAT)
+                    utils.printer.printout("[RECEIVED] Msg extended to: " + msg)
 
             incoming_msg_que = []
             for i in msg.split("\n"):
                 if i == "b''" or i == "\r" or len(i) == 0 or i == "\n":
                     continue
-
-                utils.printer.printout("[RECEIVED]: " + i)
 
                 try:  # try decoding json message
                     incoming_msg_que.append(json.loads(i))
