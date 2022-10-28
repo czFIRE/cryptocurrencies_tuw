@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 
 import utils
 
+# A client for testing our functionality, not used in Production
+
 HOST = "127.0.0.1"  # The server's hostname or IP address
 load_dotenv()
 PORT = int(os.getenv('PORT'))  # The port used by the server

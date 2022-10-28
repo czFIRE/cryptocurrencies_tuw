@@ -1,9 +1,9 @@
 import json
 from socket import socket
-import time
 import utils
 import os
 import time
+
 
 class Connection:
     FORMAT = 'utf-8'
@@ -31,7 +31,7 @@ class Connection:
             if msg[-1] != "\n":
                 utils.printer.printout("No newline at end of message. Waiting for the rest of the message")
                 start = time.time()
-                while time.time() - 30 < start and msg[-1] != "\n": # wait at most 30 seconds
+                while time.time() - 30 < start and msg[-1] != "\n":  # wait at most 30 seconds
                     msg += self.conn.recv(1024).decode(self.FORMAT)
                     utils.printer.printout("[RECEIVED] Msg extended to: " + msg)
 
@@ -100,19 +100,19 @@ class Connection:
             "error ": error
         })
 
-    def handle_client(self) -> None:
-        # TODO - add try catch for error with "connection ended by remote host" - why would we need this? -flo
-
-        utils.printer.printout(f"[NEW CONNECTION] {self.addr} connected.")
-
+    # Send the messages needed at the start of a connection
+    def send_initial_messages(self) -> bool:
         # Send hello and get_peers
         if not self.send_hello():
             utils.printer.printout("Couldn't send the hello message!")
-            return
+            return False
         if not self.send_get_peers():
             utils.printer.printout("Couldn't send the get peers message!")
-            return
+            return False
+        return True
 
+    # Loop trough new messages and answer them
+    def maintain_connection(self) -> None:
         hello_received = False
 
         # Loop trough new received messages
