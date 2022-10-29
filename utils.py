@@ -1,6 +1,6 @@
 # Python file used for defining utilities
 from sys import stdout
-from typing import Dict, Iterable, TextIO
+from typing import Iterable, TextIO
 from datetime import date, datetime
 
 from time import sleep
@@ -40,14 +40,17 @@ class PeerSaver:
     '''Used for saving and loading discovered peers'''
 
     peer_lock = Lock()
+    peers: dict = {}
 
     # handle file overwriting in a nice way
     def __init__(self, file_location: str) -> None:
-        self.peers: Dict = {}
         self.file_location = file_location
 
         daemon = Thread(target=self.auto_save, args=(3600,), daemon=True, name='Background')
         daemon.start()
+
+        # Load all discovered peers
+        self.load()
 
     def __del__(self) -> None:
         self.save()
@@ -71,6 +74,9 @@ class PeerSaver:
 
     # Saves the work each hour
     def auto_save(self, interval_sec):
+        sleep(100)
+        self.save()
+
         # run forever
         while True:
             # block for the interval
