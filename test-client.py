@@ -11,7 +11,7 @@ import utils
 
 HOST = "127.0.0.1"  # The server's hostname or IP address
 load_dotenv()
-PORT = int(os.getenv('PORT'))  # The port used by the server
+PORT = int(os.getenv('PORT', default=18018))  # The port used by the server
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     json_message = json.dumps({  # Send the initial hello message

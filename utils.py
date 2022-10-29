@@ -1,6 +1,6 @@
 # Python file used for defining utilities
 from sys import stdout
-from typing import Dict, TextIO
+from typing import Dict, Iterable, TextIO
 from datetime import date, datetime
 
 from time import sleep
@@ -28,7 +28,7 @@ class Printer:
             self.output_str.close()
         print("printer got destroyed")
 
-    def printout(self, msg, both: bool = False) -> None:
+    def printout(self, msg, both: bool = True) -> None:
         current_datetime = "[" + date.today().strftime("%d/%m/%Y") + " - " + datetime.now().strftime("%H:%M:%S") + "] "
         self.output_str.write(current_datetime + str(msg) + '\n')
 
@@ -65,7 +65,7 @@ class PeerSaver:
         with open(self.file_location, 'wb') as file:
             pickle.dump(self.peers, file)
 
-    def add_peer(self, peer) -> None:
+    def add_peers(self, peer: Iterable) -> None:
         with self.peer_lock:
             self.peers.update(peer)
 
@@ -80,7 +80,7 @@ class PeerSaver:
 
 
 # Make a public instance of printer such that it is visible across the whole implementation
-printer = Printer()
+printer = Printer("log.txt")
 peer_saver = PeerSaver("peer_db.pickle")
 
 """ 

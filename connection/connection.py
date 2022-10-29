@@ -1,9 +1,20 @@
 import json
 from socket import socket
-import utils
 import os
 import time
 
+import sys
+ 
+# setting path
+import sys
+import os
+ 
+# Hack to make it import stuff from parent directory
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+sys.path.append(parent)
+
+import utils
 
 class Connection:
     FORMAT = 'utf-8'
@@ -62,7 +73,13 @@ class Connection:
             "agent": os.getenv('NODE_NAME', default="Cool_Node")
         })
 
-    def receive_hello(self, msg_json) -> bool:
+    def receive_hello(self, msg_json: dict) -> bool:
+        if len(msg_json) > 3 or "type" not in msg_json or "version" not in msg_json:
+            utils.printer.printout("[DISCONNECTING]: hello has wrong format")
+            self.send_error("Hello has wrong format.")
+            return False  
+
+
         if msg_json["type"] != "hello":
             utils.printer.printout("[DISCONNECTING]: no hello sent")
             self.send_error("Sent no hello message at start of conversation.")
@@ -83,15 +100,31 @@ class Connection:
             "type": "getpeers"
         })
 
-    def receive_peers(self) -> bool:
-        # TODO
-        return False
+    def receive_peers(self, msg_json: dict) -> bool:
+        if len(msg_json) != 2 or "peers" not in msg_json or "type" not in msg_json:
+            utils.printer.printout("[DISCONNECTING]: peers has wrong format")
+            self.send_error("Peers has wrong format.")
+            return False
+
+        if msg_json["type"] != "peers":
+            utils.printer.printout("[DISCONNECTING]: no peers sent")
+            self.send_error("Sent no peers message after getpeers.")
+            return False
+
+        new_peers = []
+
+        for peer in msg_json["peers"]:
+            #TODO replace none with the peer dataclass => construct it
+            new_peers.append((peer.strip(), None))
+
+        utils.peer_saver.add_peers(new_peers)
+        utils.printer.printout("Succesfully added new peers!")
+        return True
 
     def send_peers(self) -> bool:
-        # TODO: read peers from file
         return self.send_message({
             "type": "peers",
-            "peers": []
+            "peers": list(utils.peer_saver.peers.keys())
         })
 
     def send_error(self, error) -> bool:
@@ -131,7 +164,10 @@ class Connection:
                     return
 
                 if i["type"] == "getpeers":
+                    if (len(i) != 1):
+                        utils.printer.printout("[DISCONNECTING]: getpeers has wrong format")
+                        self.send_error("getpeers has wrong format.")
                     self.send_peers()
 
                 if i["type"] == "peers":
-                    self.receive_peers()
+                    self.receive_peers(i)
