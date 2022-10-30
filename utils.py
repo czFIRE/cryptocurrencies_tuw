@@ -55,7 +55,8 @@ class PeerSaver:
             file.write(json.dumps(self.peers))
 
     def add_peer(self, peer) -> None:
-        self.peers[peer.ip] = peer
+        key = peer.ip + ":" + str(peer.port)
+        self.peers[key] = peer
 
 
 # Make a public instance of printer such that it is visible across the whole implementation

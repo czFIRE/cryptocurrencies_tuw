@@ -123,8 +123,6 @@ class Connection:
             self.send_error("Sent no peers message after getpeers.")
             return False
 
-        new_peers = []
-
         for peer in msg_json["peers"]:
             # Should probably do some RegEx here
             ipAndPort = peer.split(":")
