@@ -12,7 +12,6 @@ class Node:
     PORT = int(os.getenv('PORT', default=18018))
     SERVER = socket.gethostname() # needs to be like this, socket.gethostbyname('localhost') would not make the server available to clients
     ADDR = (SERVER, PORT)
-
     # thread_arr = []
 
     def __init__(self) -> None:
@@ -32,7 +31,7 @@ class Node:
             # self.thread_arr.append(thread)
             thread.start()
             utils.printer.printout(
-                f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")  # Main thread is always running, therefore substract 1
+                f"[ACTIVE CONNECTIONS] {threading.active_count() - 2}")  # Main thread is always running, therefore substract 1, also saver thread, so substract 2
 
     def handle_connection(self, conn, addr) -> None:
         connectio = ServerConnection(conn, addr)
@@ -40,6 +39,7 @@ class Node:
 
     # Connect to all hardcoded peers
     def peer_discovery(self) -> None:
+
         # Bootstrapping node and 3 other random peers from tuwel
         hardcoded_peers = [("128.130.122.101", 18018), ("139.59.206.226", 18018), ("138.68.112.193", 18018)]
 

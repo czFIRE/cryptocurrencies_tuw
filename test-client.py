@@ -5,13 +5,11 @@ import time
 
 from dotenv import load_dotenv
 
-import utils
-
 # A client for testing our functionality, not used in Production
 
-HOST = "127.0.0.1"  # The server's hostname or IP address
+HOST = "localhost"  # The server's hostname or IP address
 load_dotenv()
-PORT = int(os.getenv('PORT'))  # The port used by the server
+PORT = int(os.getenv('PORT', default=18018))  # The port used by the server
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     json_message = json.dumps({  # Send the initial hello message
@@ -22,8 +20,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
     json_getPeers = json.dumps({
         "type": "getpeers",
-        "version": "0.8.0",
-        "agent": "Kerma-Core Server 0.8 _2"
     }) + "\n"
 
     s.connect((HOST, PORT))
@@ -33,21 +29,21 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
     # split the message in two parts sent with 0.5 seconds time difference
     byt = part1.encode('utf-8')
-    utils.printer.printout("Sent: " + str(byt))
+    print("Sent: " + str(byt))
     s.send(byt)
     time.sleep(0.5)
     byt = part2.encode('utf-8')
-    utils.printer.printout("Sent: " + str(byt))
+    print("Sent: " + str(byt))
     s.send(byt)
 
     data = s.recv(1024)
 
-    utils.printer.printout(f"Received: {data!r}")
+    print(f"Received: {data!r}")
 
     byt = json_getPeers.encode('utf-8')
-    utils.printer.printout("Sent: " + json_getPeers)
+    print("Sent: " + json_getPeers)
     s.send(byt)
 
     while True:
         data = s.recv(1024)
-        utils.printer.printout(f"Received: {data!r}")
+        print(f"Received: {data!r}")
