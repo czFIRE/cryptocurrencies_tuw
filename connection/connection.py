@@ -15,6 +15,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 
 import utils
+from peers import Peer
 
 class Connection:
     FORMAT = 'utf-8'
@@ -111,7 +112,7 @@ class Connection:
             "type": "getpeers"
         })
 
-    def receive_peers(self, msg_json: dict) -> bool:
+    def receive_peers(self, msg_json) -> bool:
         if len(msg_json) != 2 or "peers" not in msg_json or "type" not in msg_json:
             utils.printer.printout("[DISCONNECTING]: peers has wrong format")
             self.send_error("Peers has wrong format.")
@@ -125,10 +126,11 @@ class Connection:
         new_peers = []
 
         for peer in msg_json["peers"]:
-            #TODO replace none with the peer dataclass => construct it
-            new_peers.append((peer.strip(), None))
+            # Should probably do some RegEx here
+            ipAndPort = peer.split(":")
+            peerObj = Peer(ipAndPort[0], int(ipAndPort[1]))
+            utils.peer_saver.add_peer(peerObj)
 
-        utils.peer_saver.add_peers(new_peers)
         utils.printer.printout("Succesfully added new peers!")
         return True
 

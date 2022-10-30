@@ -1,12 +1,9 @@
 # Python file used for defining utilities
 from sys import stdout
-from typing import Iterable, TextIO
+from typing import Dict, TextIO
 from datetime import date, datetime
 
-from time import sleep
-from threading import Lock, Thread
-
-import pickle
+import json
 import os.path
 
 
@@ -28,7 +25,7 @@ class Printer:
             self.output_str.close()
         print("printer got destroyed")
 
-    def printout(self, msg, both: bool = True) -> None:
+    def printout(self, msg, both: bool = False) -> None:
         current_datetime = "[" + date.today().strftime("%d/%m/%Y") + " - " + datetime.now().strftime("%H:%M:%S") + "] "
         self.output_str.write(current_datetime + str(msg) + '\n')
 
@@ -39,75 +36,28 @@ class Printer:
 class PeerSaver:
     '''Used for saving and loading discovered peers'''
 
-    peer_lock = Lock()
-    peers: dict = {}
-
     # handle file overwriting in a nice way
     def __init__(self, file_location: str) -> None:
+        self.peers: Dict = {}
         self.file_location = file_location
-
-        daemon = Thread(target=self.auto_save, args=(3600,), daemon=True, name='Background')
-        daemon.start()
-
-        # Load all discovered peers
-        self.load()
-
-    def __del__(self) -> None:
-        self.save()
 
     def load(self) -> None:
         if (not os.path.exists(self.file_location)):
             with open(self.file_location, 'w') as file:
                 return
 
-        with open(self.file_location, 'rb') as file:
-            self.peers = pickle.load(file)
-            printer.printout("Loaded these peers: " + str(self.peers))
+        with open(self.file_location, 'r') as file:
+            self.peers = json.loads(file.read())
+            print(self.peers)
 
     def save(self) -> None:
-        printer.printout("Saving peers!")
-        with open(self.file_location, 'wb') as file:
-            pickle.dump(self.peers, file)
+        with open(self.file_location, 'w') as file:
+            file.write(json.dumps(self.peers))
 
-    def add_peers(self, peer: Iterable) -> None:
-        with self.peer_lock:
-            self.peers.update(peer)
-
-    def auto_save(self, interval_sec):
-        """Saves the work each hour"""
-
-        sleep(30)
-        self.save()
-
-        # run forever
-        while True:
-            # block for the interval
-            sleep(interval_sec)
-            # perform the task
-            self.save()
+    def add_peer(self, peer) -> None:
+        self.peers[peer.ip] = peer
 
 
 # Make a public instance of printer such that it is visible across the whole implementation
-printer = Printer("log.txt")
-peer_saver = PeerSaver("peer_db.pickle")
-
-""" 
-# test if this works
-def test_load_save():
-    peer_saver.load()
-
-    print(peer_saver.peers)
-
-    for i in range(100):
-        thread = Thread(target=test_add_peer, args=(i,))
-        thread.start()
-
-    print(peer_saver.peers)
-
-    peer_saver.save()
-
-def test_add_peer(i):
-    peer_saver.add_peer({"ha" + str(i): 5})
-
-test_load_save() 
-"""
+printer = Printer()
+peer_saver = PeerSaver("peer_db.json")
