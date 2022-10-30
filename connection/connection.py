@@ -112,7 +112,7 @@ class Connection:
             "type": "getpeers"
         })
 
-    def receive_peers(self, msg_json) -> bool:
+    def receive_peers(self, msg_json: dict) -> bool:
         if len(msg_json) != 2 or "peers" not in msg_json or "type" not in msg_json:
             utils.printer.printout("[DISCONNECTING]: peers has wrong format")
             self.send_error("Peers has wrong format.")
