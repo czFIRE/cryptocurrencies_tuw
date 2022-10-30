@@ -65,6 +65,7 @@ class PeerSaver:
             printer.printout("Loaded these peers: " + str(self.peers))
 
     def save(self) -> None:
+        printer.printout("Saving peers!")
         with open(self.file_location, 'wb') as file:
             pickle.dump(self.peers, file)
 
@@ -72,9 +73,10 @@ class PeerSaver:
         with self.peer_lock:
             self.peers.update(peer)
 
-    # Saves the work each hour
     def auto_save(self, interval_sec):
-        sleep(100)
+        """Saves the work each hour"""
+
+        sleep(30)
         self.save()
 
         # run forever
