@@ -1,4 +1,6 @@
+import ipaddress
 import json
+import re
 from socket import socket
 import os
 import time
@@ -15,6 +17,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 
 import utils
+from peers import Peer
 
 class Connection:
     FORMAT = 'utf-8'
@@ -125,8 +128,23 @@ class Connection:
         new_peers = []
 
         for peer in msg_json["peers"]:
-            #TODO replace none with the peer dataclass => construct it
-            new_peers.append((peer.strip(), None))
+            # Valid IP check
+            peer_ip_port = peer.split(":")
+            not_valid = ["127.0.0.0", "1.1.1.1", "8.8.8.8"]
+            if len(peer_ip_port) > 1 and peer_ip_port[0] not in not_valid and str(peer_ip_port[-1]).isdigit():
+                try: 
+                    ipaddress.ip_address(peer_ip_port[0])
+                    peer_obj = Peer(peer_ip_port[0], peer_ip_port[1])
+                    new_peers.append((peer.strip(), peer_obj))
+                except(ValueError):
+                    # Accept anything with a "."
+                    if "." in peer_ip_port[0]:
+                        peer_obj = Peer(peer_ip_port[0], peer_ip_port[1])
+                        new_peers.append((peer.strip(), peer_obj))
+                    else: 
+                        utils.printer.printout("Not a valid IP: ", peer_ip_port[0])
+            else:
+                utils.printer.printout("Not a valid IP or port: ", peer)
 
         utils.peer_saver.add_peers(new_peers)
         utils.printer.printout("Succesfully added new peers!")
