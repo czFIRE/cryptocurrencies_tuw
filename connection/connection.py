@@ -84,7 +84,7 @@ class Connection:
         return self.send_message({  # Send the initial hello message
             "type": "hello",
             "version": "0.8.0",
-            "agent": os.getenv('NODE_NAME', default="Cool_Node")
+            "agent": os.getenv('NODE_NAME', default="Fun_node_name")
         })
 
     def receive_hello(self, msg_json: dict) -> bool:
@@ -178,6 +178,7 @@ class Connection:
         """Loop trough new messages and answer them"""
 
         hello_received = False
+        valid_types = ["hello", "getpeers", "peers"]
 
         # Loop trough new received messages
         while True:
@@ -189,7 +190,7 @@ class Connection:
                 return
 
             for i in msgs:
-                if not i["type"]:
+                if not "type" in i:
                     self.send_error("No valid message received")
                     return
 
@@ -209,3 +210,6 @@ class Connection:
 
                 if i["type"] == "peers":
                     self.receive_peers(i)
+
+                if i["type"] not in valid_types:
+                    self.send_error("Not a valid type")
