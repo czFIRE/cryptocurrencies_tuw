@@ -144,7 +144,7 @@ class Connection:
                     else: 
                         utils.printer.printout("Not a valid IP: ", peer_ip_port[0])
             else:
-                utils.printer.printout("Not a valid IP: ", peer_ip_port[0])
+                utils.printer.printout("Not a valid IP or port: ", peer)
 
         utils.peer_saver.add_peers(new_peers)
         utils.printer.printout("Succesfully added new peers!")
