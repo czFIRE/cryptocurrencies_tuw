@@ -57,7 +57,8 @@ class PeerSaver:
 
     def load(self) -> None:
         if (not os.path.exists(self.file_location)):
-            with open(self.file_location, 'w') as file:
+            with open(self.file_location, 'wb') as file:
+                self.save()
                 return
 
         with open(self.file_location, 'rb') as file:
