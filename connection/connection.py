@@ -1,3 +1,4 @@
+import ipaddress
 import json
 import re
 from socket import socket
@@ -127,11 +128,21 @@ class Connection:
         new_peers = []
 
         for peer in msg_json["peers"]:
-            #TODO replace none with the peer dataclass => construct it
+            # Valid IP check
             peer_ip_port = peer.split(":")
-            if len(peer_ip_port) > 1 and re.match('^\d+[.]\d+[.]*\d*[.]*\d*[.]*$', peer_ip_port[0]):
-                peer_obj = Peer(peer_ip_port[0], peer_ip_port[1])
-                new_peers.append((peer.strip(), peer_obj))
+            not_valid = ["127.0.0.0", "1.1.1.1", "8.8.8.8"]
+            if len(peer_ip_port) > 1 and peer_ip_port[0] not in not_valid and str(peer_ip_port[-1]).isdigit():
+                try: 
+                    ipaddress.ip_address(peer_ip_port[0])
+                    peer_obj = Peer(peer_ip_port[0], peer_ip_port[1])
+                    new_peers.append((peer.strip(), peer_obj))
+                except(ValueError):
+                    # Accept anything with a "."
+                    if "." in peer_ip_port[0]:
+                        peer_obj = Peer(peer_ip_port[0], peer_ip_port[1])
+                        new_peers.append((peer.strip(), peer_obj))
+                    else: 
+                        utils.printer.printout("Not a valid IP: ", peer_ip_port[0])
             else:
                 utils.printer.printout("Not a valid IP: ", peer_ip_port[0])
 
