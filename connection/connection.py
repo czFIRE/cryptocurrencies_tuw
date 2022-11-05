@@ -178,11 +178,15 @@ class Connection:
         if not self.check_msg_format(msg, 2, ["objectid"], "getobject has wrong format"):
             return False
 
+        # TODO: send the object
+
     def process_i_have_object(self, msg) -> bool:
         """Triggered by 'ihaveobject'. Check if we already have this object and if not, request it"""
 
         if not self.check_msg_format(msg, 2, ["objectid"], "ihaveobject has wrong format"):
             return False
+
+        # TODO: check if object is in storage, request it otherwise
 
     def receive_object(self, msg) -> bool:
         """Triggered by 'object'.
@@ -191,6 +195,8 @@ class Connection:
 
         if not self.check_msg_format(msg, 2, ["object"], "message of type 'object' has wrong format"):
             return False
+
+        # TODO: Check if object is in storage, store and gossip it otherwise
 
     def maintain_connection(self) -> None:
         """Loop trough new messages and answer them"""
