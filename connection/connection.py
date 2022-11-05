@@ -6,11 +6,11 @@ import os
 import time
 
 import sys
- 
+
 # setting path
 import sys
 import os
- 
+
 # Hack to make it import stuff from parent directory
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
@@ -18,6 +18,7 @@ sys.path.append(parent)
 
 import utils
 from peers import Peer
+
 
 class Connection:
     FORMAT = 'utf-8'
@@ -70,8 +71,7 @@ class Connection:
         except Exception as err:
             utils.printer.printout(f"Unexpected {err=}, {type(err)=}")
             return None
-    
-    
+
     def send_message(self, msg_json) -> bool:
         """ Function that takes a json object and sends it to the client"""
 
@@ -88,15 +88,7 @@ class Connection:
         })
 
     def receive_hello(self, msg_json: dict) -> bool:
-        if len(msg_json) > 3 or "type" not in msg_json or "version" not in msg_json:
-            utils.printer.printout("[DISCONNECTING]: hello has wrong format")
-            self.send_error("Hello has wrong format.")
-            return False  
-
-
-        if msg_json["type"] != "hello":
-            utils.printer.printout("[DISCONNECTING]: no hello sent")
-            self.send_error("Sent no hello message at start of conversation.")
+        if not self.check_msg_format(msg_json, 3, ["type", "version", "agent"], "hello has wrong format"):
             return False
 
         # If the version you receive differs from 0.8.x you must disconnect.
@@ -115,14 +107,7 @@ class Connection:
         })
 
     def receive_peers(self, msg_json) -> bool:
-        if len(msg_json) != 2 or "peers" not in msg_json or "type" not in msg_json:
-            utils.printer.printout("[DISCONNECTING]: peers has wrong format")
-            self.send_error("Peers has wrong format.")
-            return False
-
-        if msg_json["type"] != "peers":
-            utils.printer.printout("[DISCONNECTING]: no peers sent")
-            self.send_error("Sent no peers message after getpeers.")
+        if not self.check_msg_format(msg_json, 2, ["peers"], "peers has wrong format"):
             return False
 
         new_peers = []
@@ -132,16 +117,16 @@ class Connection:
             peer_ip_port = peer.split(":")
             not_valid = ["127.0.0.0", "1.1.1.1", "8.8.8.8"]
             if len(peer_ip_port) > 1 and peer_ip_port[0] not in not_valid and str(peer_ip_port[-1]).isdigit():
-                try: 
+                try:
                     ipaddress.ip_address(peer_ip_port[0])
                     peer_obj = Peer(peer_ip_port[0], peer_ip_port[1])
                     new_peers.append((peer.strip(), peer_obj))
-                except(ValueError):
+                except ValueError:
                     # Accept anything with a "."
                     if "." in peer_ip_port[0]:
                         peer_obj = Peer(peer_ip_port[0], peer_ip_port[1])
                         new_peers.append((peer.strip(), peer_obj))
-                    else: 
+                    else:
                         utils.printer.printout("Not a valid IP: ", peer_ip_port[0])
             else:
                 utils.printer.printout("Not a valid IP or port: ", peer)
@@ -150,7 +135,10 @@ class Connection:
         utils.printer.printout("Succesfully added new peers!")
         return True
 
-    def send_peers(self) -> bool:
+    def send_peers(self, msg) -> bool:
+        if not self.check_msg_format(msg, 1, [], "getpeers has wrong format"):
+            return False
+
         return self.send_message({
             "type": "peers",
             "peers": list(utils.peer_saver.peers.keys())
@@ -161,6 +149,16 @@ class Connection:
             "type": "error",
             "error ": error
         })
+
+    def check_msg_format(self, msg, size, keys, error_msg) -> bool:
+        """Check if a received message has the correct size and keys present. If not, send an error message"""
+
+        if len(msg) != size or not all(item in msg for item in keys):
+            utils.printer.printout(f"[WRONG FORMAT] {error_msg}")
+            self.send_error(error_msg)
+            return False
+
+        return True
 
     def send_initial_messages(self) -> bool:
         """Send the messages needed at the start of a connection"""
@@ -174,23 +172,43 @@ class Connection:
             return False
         return True
 
+    def send_object(self, msg) -> bool:
+        """Triggered by 'getobject'. Send back the requested object if we have it in db"""
+
+        if not self.check_msg_format(msg, 2, ["objectid"], "getobject has wrong format"):
+            return False
+
+    def process_i_have_object(self, msg) -> bool:
+        """Triggered by 'ihaveobject'. Check if we already have this object and if not, request it"""
+
+        if not self.check_msg_format(msg, 2, ["objectid"], "ihaveobject has wrong format"):
+            return False
+
+    def receive_object(self, msg) -> bool:
+        """Triggered by 'object'.
+            - Receive and store a new object, if it isn't already present in our db.
+            - Gossip it to other peers"""
+
+        if not self.check_msg_format(msg, 2, ["object"], "message of type 'object' has wrong format"):
+            return False
+
     def maintain_connection(self) -> None:
         """Loop trough new messages and answer them"""
 
         hello_received = False
-        valid_types = ["hello", "getpeers", "peers"]
+        valid_types = ["hello", "getpeers", "peers", "getobject", "ihaveobject", "object"]
 
         # Loop trough new received messages
         while True:
             msgs = self.receive_msg()
 
             # received something bad
-            if (msgs is None):
+            if msgs is None:
                 utils.printer.printout("Connection got closed, exiting!")
                 return
 
             for i in msgs:
-                if not "type" in i:
+                if "type" not in i:
                     self.send_error("No valid message received")
                     return
 
@@ -202,14 +220,19 @@ class Connection:
                     return
 
                 if i["type"] == "getpeers":
-                    if (len(i) != 1):
-                        utils.printer.printout("[DISCONNECTING]: getpeers has wrong format")
-                        self.send_error("getpeers has wrong format.")
-                        return
-                    self.send_peers()
+                    self.send_peers(i)
 
                 if i["type"] == "peers":
                     self.receive_peers(i)
+
+                if i["type"] == "getobject":
+                    self.send_object(i)
+
+                if i["type"] == "object":
+                    self.receive_object(i)
+
+                if i["type"] == "ihaveobject":
+                    self.process_i_have_object(i)
 
                 if i["type"] not in valid_types:
                     self.send_error("Not a valid type")
