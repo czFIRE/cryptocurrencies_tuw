@@ -3,12 +3,16 @@ from sys import stdout
 from typing import Iterable, TextIO
 from datetime import date, datetime
 
-from time import sleep
+import asyncio
 from threading import Lock, Thread
 
 import pickle
-import os.path
+import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+PRODUCTION = os.getenv('PRODUCTION', default=True) == 'True'
 
 # can be replaced by default logging from Python
 class Printer:
@@ -29,6 +33,9 @@ class Printer:
         print("printer got destroyed")
 
     def printout(self, msg, both: bool = True) -> None:
+        if (PRODUCTION):
+            return
+
         current_datetime = "[" + date.today().strftime("%d/%m/%Y") + " - " + datetime.now().strftime("%H:%M:%S") + "] "
         self.output_str.write(current_datetime + str(msg) + '\n')
 
@@ -46,7 +53,7 @@ class PeerSaver:
     def __init__(self, file_location: str) -> None:
         self.file_location = file_location
 
-        daemon = Thread(target=self.auto_save, args=(3600,), daemon=True, name='Background')
+        daemon = Thread(target=asyncio.run, args=(self.auto_save(3600),), daemon=True, name='Background')
         daemon.start()
 
         # Load all discovered peers
@@ -74,16 +81,16 @@ class PeerSaver:
         with self.peer_lock:
             self.peers.update(peer)
 
-    def auto_save(self, interval_sec):
+    async def auto_save(self, interval_sec):
         """Saves the work each hour"""
 
-        sleep(30)
+        await asyncio.sleep(30)
         self.save()
 
         # run forever
         while True:
             # block for the interval
-            sleep(interval_sec)
+            await asyncio.sleep(interval_sec)
             # perform the task
             self.save()
 
@@ -91,24 +98,3 @@ class PeerSaver:
 # Make a public instance of printer such that it is visible across the whole implementation
 printer = Printer("log.txt")
 peer_saver = PeerSaver("peer_db.pickle")
-
-""" 
-# test if this works
-def test_load_save():
-    peer_saver.load()
-
-    print(peer_saver.peers)
-
-    for i in range(100):
-        thread = Thread(target=test_add_peer, args=(i,))
-        thread.start()
-
-    print(peer_saver.peers)
-
-    peer_saver.save()
-
-def test_add_peer(i):
-    peer_saver.add_peer({"ha" + str(i): 5})
-
-test_load_save() 
-"""
