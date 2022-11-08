@@ -15,8 +15,8 @@ class ClientConnection(Connection):
         s.connect((host, port)),
         super().__init__(s, addr)
 
-    def start_client(self) -> None:
+    async def start_client(self) -> None:
         utils.printer.printout(f"[NEW OUTGOING CONNECTION] connecting to {self.host}:{self.port}")
 
         self.send_initial_messages()
-        self.maintain_connection()
+        await self.maintain_connection()
