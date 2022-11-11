@@ -1,12 +1,8 @@
 import asyncio
 import ipaddress
 import json
-import re
 from socket import socket
-import os
 import time
-
-import sys
 
 # setting path
 import sys
@@ -19,6 +15,7 @@ sys.path.append(parent)
 
 import utils
 from peers import Peer
+from txobject import TxObject
 
 
 class Connection:
@@ -41,8 +38,9 @@ class Connection:
 
         try:
             while True:
-                #msg = self.conn.recv(1024).decode(self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
-                msg = (await loop.sock_recv(self.conn, 1024)).decode(self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
+                # msg = self.conn.recv(1024).decode(self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
+                msg = (await loop.sock_recv(self.conn, 1024)).decode(
+                    self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
 
                 if msg == "b''" or msg == "\n" or msg == "\r" or len(msg) == 0:
                     await asyncio.sleep(1)
@@ -53,9 +51,9 @@ class Connection:
                 # If the message doesn't end with a newline character, wait for the rest of the message
                 if msg[-1] != "\n":
                     utils.printer.printout("No newline at end of message. Waiting for the rest of the message")
-                    
-                    #asyncio.wait_for()
-                    
+
+                    # asyncio.wait_for()
+
                     start = time.time()
                     while time.time() - 30 < start and msg[-1] != "\n":  # wait at most 30 seconds
                         msg += (await loop.sock_recv(self.conn, 1024)).decode(self.FORMAT)
@@ -77,11 +75,11 @@ class Connection:
 
         except ConnectionResetError:
             utils.printer.printout("Connection got killed!")
-            return None
+            return "kill"
         except Exception as err:
             utils.printer.printout(f"Unexpected {err=}, {type(err)=}")
             print(f"Unexpected {err=}, {type(err)=}")
-            return None
+            return "kill"
 
     def send_message(self, msg_json) -> bool:
         """ Function that takes a json object and sends it to the client"""
@@ -192,7 +190,6 @@ class Connection:
         # TODO: send the object
         return True
 
-
     def process_i_have_object(self, msg) -> bool:
         """Triggered by 'ihaveobject'. Check if we already have this object and if not, request it"""
 
@@ -201,7 +198,6 @@ class Connection:
 
         # TODO: check if object is in storage, request it otherwise
         return True
-
 
     def receive_object(self, msg) -> bool:
         """Triggered by 'object'.
@@ -212,6 +208,12 @@ class Connection:
             return False
 
         # TODO: Check if object is in storage, store and gossip it otherwise
+        ob = msg["object"]
+        ob_obj = TxObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
+        obj_mapping = [("hash", ob_obj)] # TODO: replace with real hash
+
+        utils.object_saver.add_object(obj_mapping)
+        utils.printer.printout("Successfully added new Objects!")
         return True
 
     async def maintain_connection(self) -> None:
@@ -231,6 +233,10 @@ class Connection:
                     return
                 else:  # if invalid input was received after hello, we already sent an error message and now just discard the message
                     continue
+
+            if msgs is "kill":  # connection got killed
+                utils.printer.printout("Connection got closed, exiting!")
+                return
 
             for msg in msgs:
                 print(msg)

@@ -2,11 +2,12 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Object:
+class TxObject:
     type: str
     txids: any  # should be array
     nonce: str
     previd: str
     created: int
     T: str
+
 

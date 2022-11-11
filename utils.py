@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 PRODUCTION = os.getenv('PRODUCTION', default=True) == 'True'
 
+
 # can be replaced by default logging from Python
 class Printer:
     '''Class used for printing stuff either to a console or to a log file'''
@@ -44,7 +45,7 @@ class Printer:
 
 
 class PeerSaver:
-    '''Used for saving and loading discovered peers'''
+    """Used for saving and loading discovered peers"""
 
     peer_lock = Lock()
     peers: dict = {}
@@ -63,7 +64,7 @@ class PeerSaver:
         self.save()
 
     def load(self) -> None:
-        if (not os.path.exists(self.file_location)):
+        if not os.path.exists(self.file_location):
             with open(self.file_location, 'wb') as file:
                 self.save()
                 return
@@ -95,6 +96,60 @@ class PeerSaver:
             self.save()
 
 
+class ObjectSaver:
+    """Used for saving and loading received objects"""
+
+    obj_lock = Lock()
+    objects: dict = {}
+
+    # handle file overwriting in a nice way
+    def __init__(self, file_location: str) -> None:
+        self.file_location = file_location
+
+        daemon = Thread(target=asyncio.run, args=(self.auto_save(3600),), daemon=True, name='Background')
+        daemon.start()
+
+        # Load all discovered peers
+        self.load()
+
+    def __del__(self) -> None:
+        self.save()
+
+    def load(self) -> None:
+        if not os.path.exists(self.file_location):
+            with open(self.file_location, 'wb') as file:
+                self.save()
+                return
+
+        with open(self.file_location, 'rb') as file:
+            self.objects = pickle.load(file)
+            printer.printout("Loaded these objects: " + str(self.objects))
+
+    def save(self) -> None:
+        printer.printout("Saving objects!")
+        with open(self.file_location, 'wb') as file:
+            pickle.dump(self.objects, file)
+
+    def add_object(self, obs: Iterable) -> None:
+        print("add_object" + str(obs))
+        with self.obj_lock:
+            self.objects.update(obs)
+
+    async def auto_save(self, interval_sec):
+        """Saves the work each hour"""
+
+        await asyncio.sleep(30)
+        self.save()
+
+        # run forever
+        while True:
+            # block for the interval
+            await asyncio.sleep(interval_sec)
+            # perform the task
+            self.save()
+
+
 # Make a public instance of printer such that it is visible across the whole implementation
 printer = Printer("log.txt")
 peer_saver = PeerSaver("peer_db.pickle")
+object_saver = ObjectSaver("obj_db.pickle")
