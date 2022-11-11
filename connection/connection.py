@@ -188,7 +188,21 @@ class Connection:
         if not self.check_msg_format(msg, 2, ["objectid"], "getobject has wrong format"):
             return False
 
-        # TODO: send the object
+        ob_hash = msg["objectid"]
+        if utils.object_saver.objects.__contains__(ob_hash):
+            obj = utils.object_saver.objects.get(ob_hash)
+            return self.send_message({
+                "type": "object",
+                "object": {
+                    "type": obj.type,
+                    "txids": obj.txids,
+                    "nonce": obj.nonce,
+                    "previd": obj.previd,
+                    "created": obj.created,
+                    "T": obj.T
+                }
+            })
+
         return True
 
     def process_i_have_object(self, msg) -> bool:
@@ -197,7 +211,13 @@ class Connection:
         if not self.check_msg_format(msg, 2, ["objectid"], "ihaveobject has wrong format"):
             return False
 
-        # TODO: check if object is in storage, request it otherwise
+        ob_hash = msg["objectid"]
+        if not utils.object_saver.objects.__contains__(ob_hash):
+            return self.send_message({
+                "type": "getobject",
+                "objectid": ob_hash
+            })
+
         return True
 
     def receive_object(self, msg) -> bool:
@@ -214,6 +234,8 @@ class Connection:
 
         # Generate the hash value
         ob_hash = sha256(str(ob_obj).encode('utf-8')).hexdigest()
+
+        utils.printer.printout("Received object with hash " + ob_hash)
 
         # Store Object in DB, if we don't already have it
         if not utils.object_saver.objects.__contains__(ob_hash):
