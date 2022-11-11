@@ -22,6 +22,18 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         "type": "getpeers",
     }) + "\n"
 
+    json_object = json.dumps({
+        "type": "object",
+        "object": {
+            "type": "block",
+            "txids": ["740bcfb434c89abe57bb2bc80290cd5495e87ebf8cd0dadb076bc50453590104"],
+            "nonce": "a26d92800cf58e88a5ecf37156c031a4147c2128beeaf1cca2785c93242a4c8b",
+            "previd": "0024839ec9632d382486ba7aac7e0bda3b4bda1d4bd79be9ae78e7e1e813ddd8",
+            "created": "1622825642",
+            "T": "003a000000000000000000000000000000000000000000000000000000000000"
+        }
+    }) + "\n"
+
     s.connect((HOST, PORT))
 
     part1 = json_message[0:15]
@@ -44,6 +56,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print("Sent: " + json_getPeers)
     s.send(byt)
 
+    byte = json_object.encode('utf-8')
+    print("Send: " + json_object)
+    s.send(byte)
+
     while True:
         data = s.recv(1024)
-        print(f"Received: {data!r}")
+       # print(f"Received: {data!r}")
