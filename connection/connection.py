@@ -226,14 +226,16 @@ class Connection:
 
             # received something bad
             if msgs is None:
-                utils.printer.printout("Connection got closed, exiting!")
-                return
+                if not hello_received:  # only close connection, if invalid input was received before hello message
+                    utils.printer.printout("Connection got closed, exiting!")
+                    return
+                else:  # if invalid input was received after hello, we already sent an error message and now just discard the message
+                    continue
 
             for msg in msgs:
                 print(msg)
                 if "type" not in msg:
                     self.send_error("No valid message received")
-                    return
 
                 if msg["type"] == "hello":
                     hello_received = self.receive_hello(msg)
