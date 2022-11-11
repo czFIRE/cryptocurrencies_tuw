@@ -192,6 +192,7 @@ class Connection:
         # TODO: send the object
         return True
 
+
     def process_i_have_object(self, msg) -> bool:
         """Triggered by 'ihaveobject'. Check if we already have this object and if not, request it"""
 
@@ -200,6 +201,7 @@ class Connection:
 
         # TODO: check if object is in storage, request it otherwise
         return True
+
 
     def receive_object(self, msg) -> bool:
         """Triggered by 'object'.
@@ -210,7 +212,7 @@ class Connection:
             return False
 
         # TODO: Check if object is in storage, store and gossip it otherwise
-        return True
+
 
     async def maintain_connection(self) -> None:
         """Loop trough new messages and answer them"""
