@@ -58,7 +58,7 @@ class Connection:
                     
                     start = time.time()
                     while time.time() - 30 < start and msg[-1] != "\n":  # wait at most 30 seconds
-                        msg += self.conn.recv(1024).decode(self.FORMAT)
+                        msg += (await loop.sock_recv(self.conn, 1024)).decode(self.FORMAT)
                         utils.printer.printout("[RECEIVED] Msg extended to: " + msg)
 
                 incoming_msg_que = []
@@ -212,7 +212,7 @@ class Connection:
             return False
 
         # TODO: Check if object is in storage, store and gossip it otherwise
-
+        return True
 
     async def maintain_connection(self) -> None:
         """Loop trough new messages and answer them"""
