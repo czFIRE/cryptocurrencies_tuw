@@ -16,6 +16,7 @@ sys.path.append(parent)
 import utils
 from peers import Peer
 from txobject import TxObject
+from hashlib import sha256
 
 
 class Connection:
@@ -207,13 +208,19 @@ class Connection:
         if not self.check_msg_format(msg, 2, ["object"], "message of type 'object' has wrong format"):
             return False
 
-        # TODO: Check if object is in storage, store and gossip it otherwise
+        # Generate a TxObject instance
         ob = msg["object"]
         ob_obj = TxObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
-        obj_mapping = [("hash", ob_obj)] # TODO: replace with real hash
 
-        utils.object_saver.add_object(obj_mapping)
-        utils.printer.printout("Successfully added new Objects!")
+        # Generate the hash value
+        ob_hash = sha256(str(ob_obj).encode('utf-8')).hexdigest()
+
+        # Store Object in DB, if we don't already have it
+        if not utils.object_saver.objects.__contains__(ob_hash):
+            obj_mapping = [(ob_hash, ob_obj)]
+            utils.object_saver.add_object(obj_mapping)
+            # TODO: Gossip it
+
         return True
 
     async def maintain_connection(self) -> None:
