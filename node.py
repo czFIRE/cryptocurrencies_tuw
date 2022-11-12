@@ -13,6 +13,7 @@ class Node:
     load_dotenv()
     PORT = int(os.getenv('PORT', default=18018))
     SERVER = socket.gethostname()  # needs to be like this, socket.gethostbyname('localhost') would not make the server available to clients
+    #SERVER = socket.gethostbyname('localhost')
     ADDR = (SERVER, PORT)
 
     # thread_arr = []

@@ -14,7 +14,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 
 import utils
-from peers import Peer
+from peer import Peer
 from txobject import TxObject
 from hashlib import sha256
 
@@ -44,7 +44,7 @@ class Connection:
                     self.FORMAT)  # blocking. Receive 1024 bytes of message and decode it
 
                 if msg == "b''" or msg == "\n" or msg == "\r" or len(msg) == 0:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.5)
                     continue
 
                 utils.printer.printout("[RECEIVED]: " + msg)
@@ -70,16 +70,18 @@ class Connection:
                     except json.decoder.JSONDecodeError:
                         utils.printer.printout("No valid json received: '" + substr + "'")
                         self.send_error("No valid json received.")
+                        
                         return None
 
                 return incoming_msg_que
 
         except ConnectionResetError:
             utils.printer.printout("Connection got killed!")
+
             return "kill"
         except Exception as err:
             utils.printer.printout(f"Unexpected {err=}, {type(err)=}")
-            print(f"Unexpected {err=}, {type(err)=}")
+
             return "kill"
 
     def send_message(self, msg_json) -> bool:
@@ -188,9 +190,15 @@ class Connection:
         if not self.check_msg_format(msg, 2, ["objectid"], "getobject has wrong format"):
             return False
 
-        ob_hash = msg["objectid"]
-        if utils.object_saver.objects.__contains__(ob_hash):
-            obj = utils.object_saver.objects.get(ob_hash)
+        ob_hash:str = msg["objectid"]
+        if ob_hash in utils.object_saver.objects:
+            obj: "TxObject | None" = utils.object_saver.objects.get(ob_hash)
+
+            #maybe add a sanity check here?
+            if (obj is None):
+               utils.printer.printout("The hash doesn't exist in our database")
+               return False
+
             return self.send_message({
                 "type": "object",
                 "object": {
@@ -211,8 +219,8 @@ class Connection:
         if not self.check_msg_format(msg, 2, ["objectid"], "ihaveobject has wrong format"):
             return False
 
-        ob_hash = msg["objectid"]
-        if not utils.object_saver.objects.__contains__(ob_hash):
+        ob_hash:str = msg["objectid"]
+        if ob_hash not in utils.object_saver.objects:
             return self.send_message({
                 "type": "getobject",
                 "objectid": ob_hash
@@ -230,7 +238,8 @@ class Connection:
 
         # Generate a TxObject instance
         ob = msg["object"]
-        ob_obj = TxObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
+        #ob_obj = TxObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
+        ob_obj = TxObject(**ob)
 
         # Generate the hash value
         ob_hash = sha256(str(ob_obj).encode('utf-8')).hexdigest()
@@ -238,7 +247,7 @@ class Connection:
         utils.printer.printout("Received object with hash " + ob_hash)
 
         # Store Object in DB, if we don't already have it
-        if not utils.object_saver.objects.__contains__(ob_hash):
+        if ob_hash not in utils.object_saver.objects:  
             obj_mapping = [(ob_hash, ob_obj)]
             utils.object_saver.add_object(obj_mapping)
             # TODO: Gossip it
@@ -263,12 +272,12 @@ class Connection:
                 else:  # if invalid input was received after hello, we already sent an error message and now just discard the message
                     continue
 
-            if msgs is "kill":  # connection got killed
+            if msgs == "kill":  # connection got killed
                 utils.printer.printout("Connection got closed, exiting!")
                 return
 
             for msg in msgs:
-                print(msg)
+                utils.printer.printout(msg)
                 if "type" not in msg:
                     self.send_error("No valid message received")
 

@@ -1,6 +1,6 @@
 # Python file used for defining utilities
 from sys import stdout
-from typing import Iterable, TextIO
+from typing import Iterable, TextIO, Dict
 from datetime import date, datetime
 
 import asyncio
@@ -53,7 +53,7 @@ class PeerSaver:
     """Used for saving and loading discovered peers"""
 
     peer_lock = Lock()
-    peers: dict[(str, Peer)] = {}
+    peers: Dict[(str, Peer)] = {}
 
     # handle file overwriting in a nice way
     def __init__(self, file_location: str) -> None:
@@ -105,7 +105,7 @@ class ObjectSaver:
     """Used for saving and loading received objects"""
 
     obj_lock = Lock()
-    objects: dict[(str, TxObject)] = {}
+    objects: Dict[(str, TxObject)] = {}
 
     # handle file overwriting in a nice way
     def __init__(self, file_location: str) -> None:
