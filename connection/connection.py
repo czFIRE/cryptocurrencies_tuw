@@ -182,6 +182,19 @@ class Connection:
             return False
         return True
 
+    def gossip_object(self, ob_hash) -> bool:
+        obj_message = {
+                "type": "ihaveobject",
+                "objectid": ob_hash
+        }
+
+        msg = json.dumps(obj_message) + "\n"
+        message = msg.encode(self.FORMAT)
+        utils.printer.printout("[SENT] " + msg)
+
+        # FIX: broadcast to all, might need to loop through all clients
+        return self.conn.sendto(message, ('<broadcast>', self.addr[1]))
+
     def send_object(self, msg) -> bool:
         """Triggered by 'getobject'. Send back the requested object if we have it in db"""
 
@@ -241,7 +254,8 @@ class Connection:
         if not utils.object_saver.objects.__contains__(ob_hash):
             obj_mapping = [(ob_hash, ob_obj)]
             utils.object_saver.add_object(obj_mapping)
-            # TODO: Gossip it
+            # Gossip object to peers
+            self.gossip_object(ob_hash)
 
         return True
 
