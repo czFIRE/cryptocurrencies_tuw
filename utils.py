@@ -11,6 +11,9 @@ import os
 
 from dotenv import load_dotenv
 
+from peer import Peer
+from txobject import TxObject
+
 load_dotenv()
 PRODUCTION = os.getenv('PRODUCTION', default=True) == 'True'
 
@@ -37,24 +40,26 @@ class Printer:
         if (PRODUCTION):
             return
 
+        str_msg: str = str(msg)
+
         current_datetime = "[" + date.today().strftime("%d/%m/%Y") + " - " + datetime.now().strftime("%H:%M:%S") + "] "
-        self.output_str.write(current_datetime + str(msg) + '\n')
+        self.output_str.write(current_datetime + str_msg + '\n')
 
         if (both and self.output_str != stdout):
-            print(current_datetime + str(msg))
+            print(current_datetime + str_msg[:min(len(str_msg), 100)])
 
 
 class PeerSaver:
     """Used for saving and loading discovered peers"""
 
     peer_lock = Lock()
-    peers: dict = {}
+    peers: dict[(str, Peer)] = {}
 
     # handle file overwriting in a nice way
     def __init__(self, file_location: str) -> None:
         self.file_location = file_location
 
-        daemon = Thread(target=asyncio.run, args=(self.auto_save(3600),), daemon=True, name='Background')
+        daemon = Thread(target=asyncio.run, args=(self.auto_save(3600),), daemon=True, name='PeerSaver')
         daemon.start()
 
         # Load all discovered peers
@@ -82,7 +87,7 @@ class PeerSaver:
         with self.peer_lock:
             self.peers.update(peer)
 
-    async def auto_save(self, interval_sec):
+    async def auto_save(self, interval_sec) -> None:
         """Saves the work each hour"""
 
         await asyncio.sleep(30)
@@ -100,13 +105,13 @@ class ObjectSaver:
     """Used for saving and loading received objects"""
 
     obj_lock = Lock()
-    objects: dict = {}
+    objects: dict[(str, TxObject)] = {}
 
     # handle file overwriting in a nice way
     def __init__(self, file_location: str) -> None:
         self.file_location = file_location
 
-        daemon = Thread(target=asyncio.run, args=(self.auto_save(3600),), daemon=True, name='Background')
+        daemon = Thread(target=asyncio.run, args=(self.auto_save(3600),), daemon=True, name='ObjectSaver')
         daemon.start()
 
         # Load all discovered peers
@@ -131,14 +136,14 @@ class ObjectSaver:
             pickle.dump(self.objects, file)
 
     def add_object(self, obs: Iterable) -> None:
-        print("add_object" + str(obs))
+        printer.printout("add_object" + str(obs))
         with self.obj_lock:
             self.objects.update(obs)
 
-    async def auto_save(self, interval_sec):
+    async def auto_save(self, interval_sec) -> None:
         """Saves the work each hour"""
 
-        await asyncio.sleep(30)
+        await asyncio.sleep(35)
         self.save()
 
         # run forever
