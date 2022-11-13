@@ -10,4 +10,8 @@ class TxObject:
     created: int
     T: str
 
-
+@dataclass
+class TransactionObject:
+    type: str
+    inputs: list  # should be array
+    outputs: str
