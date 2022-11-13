@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import ipaddress
 import json
 from socket import socket
@@ -179,9 +180,9 @@ class Connection:
         
         # The message that is signed is the plaintext transaction with null as signature?
         signatures = []
-        plaintext = ob.copy() 
+        plaintext = copy.deepcopy(ob) 
         for inp in plaintext["inputs"]:
-            inp["sign"] = None
+            inp["sig"] = None
         plaintext = str(plaintext)
 
 
@@ -214,7 +215,7 @@ class Connection:
             if not self.check_msg_format(output, 2, ["pubkey", "value"], "message of type 'transaction' has wrong format"):
                 return False
             
-            if int(input["value"]) < 0:
+            if int(output["value"]) < 0:
                 return False
             
             # b) For each input, verify the signature. Our protocol uses ed25519 signatures.
