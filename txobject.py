@@ -4,7 +4,7 @@ from dataclasses import dataclass
 @dataclass
 class TxObject:
     type: str
-    txids: any  # should be array
+    txids: list  # should be array
     nonce: str
     previd: str
     created: int
@@ -13,5 +13,11 @@ class TxObject:
 @dataclass
 class TransactionObject:
     type: str
-    inputs: list  # should be array
-    outputs: str
+    inputs: list
+    outputs: list
+
+@dataclass
+class CoinbaseTransaction:
+    type: str
+    height: int
+    outputs: list
