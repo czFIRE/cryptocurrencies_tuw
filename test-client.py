@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 # A client for testing our functionality, not used in Production
 
 HOST = socket.gethostname()  # The server's hostname or IP address
+#HOST = "localhost"
 load_dotenv()
 PORT = int(os.getenv('PORT', default=18018))  # The port used by the server
 

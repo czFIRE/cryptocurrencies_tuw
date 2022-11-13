@@ -5,8 +5,6 @@ import os
 
 import sys
 sys.path.append('../cryptocurrencies_tuw')
-import utils
-
 
 class ConnectionTest:
     FORMAT = 'utf-8'
@@ -17,7 +15,7 @@ class ConnectionTest:
 
     def __del__(self) -> None:
         # close the connection when out of scope or destroyed
-        utils.printer.printout("Closing connection")
+        print("Closing connection")
         self.conn.close()
 
     # Function that waits for the next message, receives it, trys to decode it and returns it
@@ -34,12 +32,12 @@ class ConnectionTest:
                 if i == "b''" or i == "\r" or len(i) == 0 or i == "\n":
                     continue
 
-                utils.printer.printout("[RECEIVED]: " + i)
+                print("[RECEIVED]: " + i)
 
                 try:  # try decoding json message
                     incoming_msg_que.append(json.loads(i))
                 except json.decoder.JSONDecodeError:
-                    utils.printer.printout("No valid json received: '" + i + "'")
+                    print("No valid json received: '" + i + "'")
                     self.send_error("No valid json received.")
 
             return incoming_msg_que
@@ -48,7 +46,7 @@ class ConnectionTest:
     def send_message(self, msg_json) -> bool:
         msg = json.dumps(msg_json) + "\n"
         message = msg.encode(self.FORMAT)
-        utils.printer.printout("[SENT] " + msg)
+        print("[SENT] " + msg)
         return self.conn.send(message) == len(msg)
     
     def send_message_in_parts(self, msg_json) -> bool:
@@ -58,9 +56,9 @@ class ConnectionTest:
         msg_2 = json.dumps(msg_json[split::]) + "\n"
         message_1 = msg_1.encode(self.FORMAT)
         message_2 = msg_2.encode(self.FORMAT)
-        utils.printer.printout("[SENT] " + msg_1)
+        print("[SENT] " + msg_1)
         self.conn.send(message_1)
-        utils.printer.printout("[SENT] " + msg_2)
+        print("[SENT] " + msg_2)
         self.conn.send(message_2)
 
         return True
@@ -74,18 +72,18 @@ class ConnectionTest:
 
     def receive_hello(self, msg_json) -> bool:
         if msg_json["type"] != "hello":
-            utils.printer.printout("[DISCONNECTING]: no hello sent")
+            print("[DISCONNECTING]: no hello sent")
             self.send_error("Sent no hello message at start of conversation.")
             return False
 
         # If the version you receive differs from 0.8.x you must disconnect.
         elif msg_json["version"][0:3] != "0.8" or len(msg_json["version"]) < 5:
-            utils.printer.printout("[DISCONNECTING]: Wrong version " + msg_json["version"][0:3])
+            print("[DISCONNECTING]: Wrong version " + msg_json["version"][0:3])
             self.send_error("Wrong protocol version")
             return False
 
         else:
-            utils.printer.printout("Hello received")
+            print("Hello received")
             return True
 
     def send_get_peers(self) -> bool:
@@ -95,7 +93,7 @@ class ConnectionTest:
 
     def receive_peers(self, peerList) -> bool:
         for i in peerList:
-            utils.printer.printout(i)
+            print(i)
         return False
 
     def send_peers(self) -> bool:
@@ -114,14 +112,14 @@ class ConnectionTest:
     def handle_client(self) -> None:
         # TODO - add try catch for error with "connection ended by remote host" - why would we need this? -flo
 
-        utils.printer.printout(f"[NEW CONNECTION] {self.addr} connected.")
+        print(f"[NEW CONNECTION] {self.addr} connected.")
 
         # Send hello and get_peers
         if not self.send_hello():
-            utils.printer.printout("Couldn't send the hello message!")
+            print("Couldn't send the hello message!")
             return
         if not self.send_get_peers():
-            utils.printer.printout("Couldn't send the get peers message!")
+            print("Couldn't send the get peers message!")
             return
 
         hello_received = False
@@ -149,8 +147,8 @@ class ConnectionTest:
                     msg_2 = 'tpeers"}' + "\n"
                     message_1 = msg_1.encode(self.FORMAT)
                     message_2 = msg_2.encode(self.FORMAT)
-                    utils.printer.printout("[SENT] " + msg_1)
-                    utils.printer.printout("[SENT] " + msg_2)
+                    print("[SENT] " + msg_1)
+                    print("[SENT] " + msg_2)
                     self.conn.send(message_1)
                     time.sleep(0.1)
                     self.conn.send(message_2)

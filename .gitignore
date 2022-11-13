@@ -138,3 +138,4 @@ test.py
 peer_db.json
 peer_db.pickle
 log.txt
+obj_db.pickle
