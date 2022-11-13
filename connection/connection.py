@@ -4,6 +4,7 @@ import ipaddress
 import json
 from socket import socket
 import time
+import ed25519
 
 # setting path
 import sys
@@ -221,9 +222,10 @@ class Connection:
             # b) For each input, verify the signature. Our protocol uses ed25519 signatures.
             i = outputs.index(output)
             pubkey = output["pubkey"]
+            verifying_key = ed25519.VerifyingKey(pubkey, encoding="hex")
             try: 
                 # uses pub key on the plaintext transaction message, with sign = null
-                pubkey.verify(signatures[i], plaintext, encoding='hex')
+                verifying_key.verify(signatures[i], plaintext, encoding='hex')
                 print("The signature is valid.")
             except:
                 print("Invalid signature")
