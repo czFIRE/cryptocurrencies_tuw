@@ -15,7 +15,7 @@ sys.path.append(parent)
 
 import utils
 from peers import Peer
-from txobject import TxObject
+from txobject import TxObject, TransactionObject
 from hashlib import sha256
 
 
@@ -169,6 +169,69 @@ class Connection:
             return False
 
         return True
+    
+    def valid_transaction(self, ob) -> bool:
+        """ Check if valid transaction. If not, send error message """
+        # Could maybe move this functionality to utils?
+
+        if not self.check_msg_format(ob, 3, ["type", "inputs", "outputs"], "message of type 'transaction' has wrong format"):
+            return False
+        
+        # The message that is signed is the plaintext transaction with null as signature?
+        signatures = []
+        plaintext = ob.copy() 
+        for inp in plaintext["inputs"]:
+            inp["sign"] = None
+        plaintext = str(plaintext)
+
+
+        inputs = ob["inputs"]
+        for input in inputs:
+            if not self.check_msg_format(input, 2, ["outpoint", "sig"], "message of type 'transaction' has wrong format"):
+                return False
+
+            # Check outpoint. Valid txid in object database, index less than number of outputs in outpoint transaction
+            outpoint = input["outpoint"]
+            if not self.check_msg_format(outpoint, 2, ["txid", "index"], "message of type 'transaction' has wrong format"):
+                return False
+            
+            txid = outpoint["txid"]
+            prev_transaction = 0
+            # Find the transaction the txid is pointing to
+            if not utils.object_saver.objects.has_key(txid):
+                return False
+            
+            prev_transaction = utils.object_saver.objects[txid]
+
+            index = outpoint["index"]
+            if index > len(prev_transaction.outputs) - 1:
+                return False
+ 
+            signatures.append(input["sig"])
+        
+        outputs = ob["outputs"]
+        for output in outputs:
+            if not self.check_msg_format(output, 2, ["pubkey", "value"], "message of type 'transaction' has wrong format"):
+                return False
+            
+            if int(input["value"]) < 0:
+                return False
+            
+            # b) For each input, verify the signature. Our protocol uses ed25519 signatures.
+            i = outputs.index(output)
+            pubkey = output["pubkey"]
+            try: 
+                # uses pub key on the plaintext transaction message, with sign = null
+                pubkey.verify(signatures[i], plaintext, encoding='hex')
+                print("The signature is valid.")
+            except:
+                print("Invalid signature")
+                return False
+
+        # TODO: d) Transactions must respect the law of conservation, i.e. the sum of all input values 
+        # is at least the sum of output values
+
+        return True
 
     def send_initial_messages(self) -> bool:
         """Send the messages needed at the start of a connection"""
@@ -230,18 +293,31 @@ class Connection:
 
         # Generate a TxObject instance
         ob = msg["object"]
-        ob_obj = TxObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
+        if "type" not in ob.keys():
+            return False
 
-        # Generate the hash value
-        ob_hash = sha256(str(ob_obj).encode('utf-8')).hexdigest()
+        # For blocks
+        if ob["type"] == "block":
+            if self.check_msg_format(ob, 6, ["type", "txids", "nonce", "previd", "created", "T"], "message of type 'object' has wrong format"):
+                ob_obj = TxObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
 
-        utils.printer.printout("Received object with hash " + ob_hash)
+                # Generate the hash value
+                ob_hash = sha256(str(ob_obj).encode('utf-8')).hexdigest()
 
-        # Store Object in DB, if we don't already have it
-        if not utils.object_saver.objects.__contains__(ob_hash):
-            obj_mapping = [(ob_hash, ob_obj)]
-            utils.object_saver.add_object(obj_mapping)
-            # TODO: Gossip it
+                utils.printer.printout("Received object with hash " + ob_hash)
+
+                # Store Object in DB, if we don't already have it
+                if not utils.object_saver.objects.__contains__(ob_hash):
+                    obj_mapping = [(ob_hash, ob_obj)]
+                    utils.object_saver.add_object(obj_mapping)
+                    # TODO: Gossip it
+        
+        elif ob["type"] == "transaction":
+            if self.valid_transaction(ob):
+                ob_obj = TransactionObject(ob["type"], ob["inputs"], ob["outputs"])
+                obj_mapping = [(ob["inputs"][0]["outpoint"]["txid"], ob_obj)]
+                utils.object_saver.add_object(obj_mapping)
+
 
         return True
 
