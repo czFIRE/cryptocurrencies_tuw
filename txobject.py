@@ -10,4 +10,14 @@ class TxObject:
     created: int
     T: str
 
+@dataclass
+class TransactionObject:
+    type: str
+    inputs: list
+    outputs: list
 
+@dataclass
+class CoinbaseTransaction:
+    type: str
+    height: int
+    outputs: list
