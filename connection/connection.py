@@ -4,6 +4,9 @@ import json
 from socket import socket
 import time
 
+import threading
+import math
+
 # setting path
 import sys
 import os
@@ -18,18 +21,45 @@ from peers import Peer
 from txobject import TxObject
 from hashlib import sha256
 
+CURR_OBJ_HASH = ""
 
 class Connection:
     FORMAT = 'utf-8'
 
+    last_hash = ""
+    curr_hash = "a"
+
+    cv = threading.Condition()
+
     def __init__(self, conn: socket, addr) -> None:
         self.addr = addr
         self.conn: socket = conn
+        threading.Thread(target=self.broadcast_object)
 
     def __del__(self) -> None:
         """ close the connection when out of scope or destroyed """
         utils.printer.printout("Closing connection")
         self.conn.close()
+
+    def object_got(self, ob_hash: str):
+        CURR_OBJ_HASH = ob_hash
+
+        self.curr_hash = ob_hash
+           # Gossip object to peers
+        #self.gossip_object(ob_hash)
+
+        self.cv.notify_all()
+
+            # this is a hack I'm ashamed of
+        time.sleep(0.15)
+
+        CURR_OBJ_HASH = ""
+
+    def broadcast_object(self):
+        while True:
+            self.cv.wait_for(lambda: self.last_hash != self.curr_hash)
+            self.last_hash = self.curr_hash
+            self.gossip_object(self.last_hash)
 
     async def receive_msg(self):
         """Function that waits for the next message, receives it, trys to decode it and returns it"""
@@ -182,7 +212,7 @@ class Connection:
             return False
         return True
 
-    def gossip_object(self, ob_hash) -> bool:
+    def gossip_object(self, ob_hash) -> int:
         obj_message = {
                 "type": "ihaveobject",
                 "objectid": ob_hash
@@ -254,8 +284,9 @@ class Connection:
         if not utils.object_saver.objects.__contains__(ob_hash):
             obj_mapping = [(ob_hash, ob_obj)]
             utils.object_saver.add_object(obj_mapping)
-            # Gossip object to peers
-            self.gossip_object(ob_hash)
+
+            #TODO
+            threading.Thread(target=self.object_got, args=(ob_hash))
 
         return True
 
