@@ -20,7 +20,6 @@ sys.path.append(parent)
 import utils
 from peer import Peer
 from txobject import BlockObject, TransactionObject, CoinbaseTransaction
-from hashlib import sha256
 
 CURR_OBJ_HASH = ""
 
@@ -53,6 +52,7 @@ class Connection:
             self.cv.wait_for(lambda: self.last_hash != self.curr_hash)
             self.last_hash = self.curr_hash
             self.gossip_object(self.last_hash)
+            utils.printer.printout("Gossiping it out!")
 
     async def receive_msg(self):
         """Function that waits for the next message, receives it, trys to decode it and returns it"""
@@ -333,9 +333,9 @@ class Connection:
 
         return True
     
-    def store_hash_object(self, ob_obj) -> str:
+    def store_hash_object(self, ob_obj: "BlockObject|TransactionObject|CoinbaseTransaction") -> str:
         # Generate the hash value
-        ob_hash = sha256(str(ob_obj).encode('utf-8')).hexdigest()
+        ob_hash = ob_obj.sha256()
 
         utils.printer.printout("Received object with hash " + ob_hash)
 
@@ -365,7 +365,10 @@ class Connection:
         # For block objects
         if ob["type"] == "block":
             if self.check_msg_format(ob, 6, ["type", "txids", "nonce", "previd", "created", "T"], "message of type 'object' has wrong format"):
-                ob_obj = BlockObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
+                miner = "" if "miner" not in ob else ob["miner"]
+                note = "" if "note" not in ob else ob["note"]
+
+                ob_obj = BlockObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"],miner,note)
 
                 return self.store_hash_object(ob_obj) != ""
 
