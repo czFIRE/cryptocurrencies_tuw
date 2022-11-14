@@ -17,7 +17,7 @@ sys.path.append(parent)
 
 import utils
 from peers import Peer
-from txobject import TxObject, TransactionObject
+from txobject import TxObject, TransactionObject, CoinbaseTransaction
 from hashlib import sha256
 
 
@@ -299,7 +299,7 @@ class Connection:
         if "type" not in ob.keys():
             return False
 
-        # For blocks
+        # For block objects
         if ob["type"] == "block":
             if self.check_msg_format(ob, 6, ["type", "txids", "nonce", "previd", "created", "T"], "message of type 'object' has wrong format"):
                 ob_obj = TxObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
@@ -315,8 +315,15 @@ class Connection:
                     utils.object_saver.add_object(obj_mapping)
                     # TODO: Gossip it
         
+        # For transaction objects
         elif ob["type"] == "transaction":
-            if self.valid_transaction(ob):
+            if "height" in ob.keys():
+                ob_obj = CoinbaseTransaction(ob["type"], ob["height"], ob["outputs"])
+                # What do we want as the key for a coinbase transaction?
+                obj_mapping = [(str(ob["height"]) + ob["outputs"][0]["pubkey"], ob_obj)]
+                utils.object_saver.add_object(obj_mapping)
+
+            elif self.valid_transaction(ob):
                 ob_obj = TransactionObject(ob["type"], ob["inputs"], ob["outputs"])
                 obj_mapping = [(ob["inputs"][0]["outpoint"]["txid"], ob_obj)]
                 utils.object_saver.add_object(obj_mapping)
