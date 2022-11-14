@@ -200,9 +200,10 @@ class Connection:
             txid = outpoint["txid"]
             prev_transaction = 0
             # Find the transaction the txid is pointing to
-            if not utils.object_saver.objects.has_key(txid):
+            if txid not in utils.object_saver.objects:
                 return False
             
+            # TODO replace it here with a hash
             prev_transaction = utils.object_saver.objects[txid]
 
             index = outpoint["index"]
@@ -233,6 +234,14 @@ class Connection:
 
         # TODO: d) Transactions must respect the law of conservation, i.e. the sum of all input values 
         # is at least the sum of output values
+
+        # for tx in inputs:
+        #   sum += tx.value
+
+        # for value in outputs:
+        #   out_sum += value
+
+        #   return (sum >= outputs):
 
         return True
 
