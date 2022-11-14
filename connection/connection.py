@@ -189,6 +189,18 @@ class Connection:
             return False
 
         return True
+    
+    def test_key(self, pubkey, message, sign) -> bool:
+        verifying_key = ed25519.VerifyingKey(pubkey, encoding="hex")
+        try:
+            # uses pub key on the plaintext transaction message, with sign = null
+            verifying_key.verify(sign, message, encoding='hex')
+            print("The signature is valid.")
+            return True
+        except:
+            print("Invalid signature")
+            return False
+
 
     def valid_transaction(self, ob) -> bool:
         """ Check if valid transaction. If not, send error message """
@@ -244,14 +256,8 @@ class Connection:
             # b) For each input, verify the signature. Our protocol uses ed25519 signatures.
             i = outputs.index(output)
             pubkey = output["pubkey"]
-            verifying_key = ed25519.VerifyingKey(pubkey, encoding="hex")
-            try:
-                # uses pub key on the plaintext transaction message, with sign = null
-                verifying_key.verify(signatures[i], plaintext, encoding='hex')
-                print("The signature is valid.")
-            except:
-                print("Invalid signature")
-                return False
+            # if not self.test_key(pubkey, plaintext, signatures[i]):
+            #     return False
 
             output_sum += int(output["value"])
 
