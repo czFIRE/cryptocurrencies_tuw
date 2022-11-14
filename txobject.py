@@ -1,6 +1,6 @@
 from dataclasses import dataclass, asdict
 from typing import Any, List
-import json 
+import json
 
 @dataclass
 class BlockObject:
@@ -11,9 +11,8 @@ class BlockObject:
     created: int
     T: str
 
-    def __repr__(self):
-        return json.dumps(asdict(self))
-
+    def __repr__(self) -> str:
+        return json.dumps(asdict(self)) 
 
 @dataclass
 class TransactionObject:
@@ -21,8 +20,8 @@ class TransactionObject:
     inputs: List[Any]
     outputs: List[Any]
 
-    def __repr__(self):
-        return json.dumps(asdict(self))
+    def __repr__(self) -> str:
+        return json.dumps(asdict(self)) 
 
 @dataclass
 class CoinbaseTransaction:
@@ -30,5 +29,5 @@ class CoinbaseTransaction:
     height: int
     outputs: List[Any]
 
-    def __repr__(self):
-        return json.dumps(asdict(self))
+    def __repr__(self) -> str:
+        return json.dumps(asdict(self)) 

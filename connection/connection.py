@@ -218,6 +218,7 @@ class Connection:
             inp["sig"] = None
         plaintext = str(plaintext)
 
+        input_sum = 0
 
         inputs = ob["inputs"]
         for input in inputs:
@@ -242,7 +243,10 @@ class Connection:
                 return False
  
             signatures.append(input["sig"])
+            input_sum += sum(map(lambda output: int(output["value"]), prev_transaction.outputs))
         
+        output_sum = 0
+
         outputs = ob["outputs"]
         for output in outputs:
             if not self.check_msg_format(output, 2, ["pubkey", "value"], "message of type 'transaction' has wrong format"):
@@ -263,6 +267,8 @@ class Connection:
                 print("Invalid signature")
                 return False
 
+            output_sum += int(output["value"])
+
         # TODO: d) Transactions must respect the law of conservation, i.e. the sum of all input values 
         # is at least the sum of output values
 
@@ -272,9 +278,7 @@ class Connection:
         # for value in outputs:
         #   out_sum += value
 
-        #   return (sum >= outputs):
-
-        return True
+        return input_sum >= output_sum
 
     def send_initial_messages(self) -> bool:
         """Send the messages needed at the start of a connection"""
