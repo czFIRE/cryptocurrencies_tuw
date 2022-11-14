@@ -22,38 +22,32 @@ sys.path.append(parent)
 
 
 CURR_OBJ_HASH = ""
-
+cv = threading.Condition()
 
 class Connection:
     FORMAT = 'utf-8'
 
-    last_hash = "b"
-    curr_hash = "a"
-
-    cv = threading.Condition()
+#    last_hash = "b"
+    curr_hash = ""
 
     def __init__(self, conn: socket, addr) -> None:
         self.addr = addr
         self.conn: socket = conn
-        threading.Thread(target=self.broadcast_object)
+        self.broadcaster = threading.Thread(target=self.broadcast_object, daemon=True, name='Broadcaster')
+        self.broadcaster.start()
 
     def __del__(self) -> None:
         """ close the connection when out of scope or destroyed """
         utils.printer.printout("Closing connection on thread " + str(threading.get_ident()))
         self.conn.close()
 
-    def object_got(self, ob_hash: str):
-        CURR_OBJ_HASH = ob_hash
-
-        self.cv.notify_all()
-
     def broadcast_object(self):
         while True:
-            self.curr_hash = CURR_OBJ_HASH
-            self.cv.wait_for(lambda: self.last_hash != self.curr_hash)
-            self.last_hash = self.curr_hash
-            self.gossip_object(self.last_hash)
-            utils.printer.printout("Gossiping it out!")
+            with cv:
+                cv.wait_for(lambda: CURR_OBJ_HASH != self.curr_hash)
+                self.curr_hash = CURR_OBJ_HASH
+                self.gossip_object(self.curr_hash)
+                utils.printer.printout("Gossiping it out!")
 
     async def receive_msg(self):
         """Function that waits for the next message, receives it, trys to decode it and returns it"""
@@ -339,7 +333,11 @@ class Connection:
             utils.object_saver.add_object(obj_mapping)
 
             # Gossip it
-            threading.Thread(target=self.object_got, args=(ob_hash))
+            global CURR_OBJ_HASH
+            CURR_OBJ_HASH = ob_hash
+
+            with cv:
+                cv.notify_all()
 
         return ob_hash
 
@@ -362,7 +360,7 @@ class Connection:
                 miner = "" if "miner" not in ob else ob["miner"]
                 note = "" if "note" not in ob else ob["note"]
 
-                ob_obj = BlockObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"],miner,note)
+                ob_obj = BlockObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"], miner, note)
 
                 return self.store_hash_object(ob_obj) != ""
 
