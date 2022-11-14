@@ -232,11 +232,10 @@ class Connection:
             txid = outpoint["txid"]
             prev_transaction = TransactionObject("", [], [])
             # Find the transaction the txid is pointing to
-            if txid not in utils.object_saver.objects:
+            if not txid in utils.object_saver.objects.keys():
                 return False
             
-            # TODO replace it here with a hash
-            prev_transaction: "TransactionObject|CoinbaseTransaction" = utils.object_saver.objects[txid]  # type: ignore
+            prev_transaction = utils.object_saver.objects[txid]
 
             index = outpoint["index"]
             if (index > len(prev_transaction.outputs) - 1):
@@ -345,6 +344,22 @@ class Connection:
             })
 
         return True
+    
+    def store_hash_object(self, ob_obj) -> str:
+        # Generate the hash value
+        ob_hash = sha256(str(ob_obj).encode('utf-8')).hexdigest()
+
+        utils.printer.printout("Received object with hash " + ob_hash)
+
+        # Store Object in DB, if we don't already have it
+        if ob_hash not in utils.object_saver.objects:
+            obj_mapping = [(ob_hash, ob_obj)]
+            utils.object_saver.add_object(obj_mapping)
+            
+            # Gossip it
+            threading.Thread(target=self.object_got, args=(ob_hash))
+        
+        return ob_hash
 
     def receive_object(self, msg) -> bool:
         """Triggered by 'object'.
@@ -364,38 +379,19 @@ class Connection:
             if self.check_msg_format(ob, 6, ["type", "txids", "nonce", "previd", "created", "T"], "message of type 'object' has wrong format"):
                 ob_obj = BlockObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
 
-                # Generate the hash value
-                ob_hash = sha256(str(ob_obj).encode('utf-8')).hexdigest()
+                return self.store_hash_object() != ""
 
-                utils.printer.printout("Received object with hash " + ob_hash)
-
-                # Store Object in DB, if we don't already have it
-                if ob_hash not in utils.object_saver.objects:
-                    obj_mapping = [(ob_hash, ob_obj)]
-                    utils.object_saver.add_object(obj_mapping)
-                    # Gossip it
-                    
-                    threading.Thread(target=self.object_got, args=(ob_hash))
-        
         # For transaction objects
         elif ob["type"] == "transaction":
             if "height" in ob.keys():
                 ob_obj = CoinbaseTransaction(ob["type"], ob["height"], ob["outputs"])
-                # What do we want as the key for a coinbase transaction?
                 
-                # TODO replace the strange keys with hashing
-                obj_mapping = [(str(ob["height"]) + ob["outputs"][0]["pubkey"], ob_obj)]
-                utils.object_saver.add_object(obj_mapping)
-
-                #threading.Thread(target=self.object_got, args=(ob_hash))
+                return self.store_hash_object() != ""
 
             elif self.valid_transaction(ob):
                 ob_obj = TransactionObject(ob["type"], ob["inputs"], ob["outputs"])
-                # TODO replace the strange keys with hashing
-                obj_mapping = [(ob["inputs"][0]["outpoint"]["txid"], ob_obj)]
-                utils.object_saver.add_object(obj_mapping)
-
-                # threading.Thread(target=self.object_got, args=(ob_hash))
+                
+                return self.store_hash_object() != ""
 
         return True
 

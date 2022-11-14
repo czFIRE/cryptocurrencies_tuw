@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Any, List
+import json 
 
 @dataclass
 class BlockObject:
@@ -10,14 +11,24 @@ class BlockObject:
     created: int
     T: str
 
+    def __repr__(self):
+        return json.dumps(asdict(self))
+
+
 @dataclass
 class TransactionObject:
     type: str
     inputs: List[Any]
     outputs: List[Any]
 
+    def __repr__(self):
+        return json.dumps(asdict(self))
+
 @dataclass
 class CoinbaseTransaction:
     type: str
     height: int
     outputs: List[Any]
+
+    def __repr__(self):
+        return json.dumps(asdict(self))
