@@ -379,19 +379,19 @@ class Connection:
             if self.check_msg_format(ob, 6, ["type", "txids", "nonce", "previd", "created", "T"], "message of type 'object' has wrong format"):
                 ob_obj = BlockObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
 
-                return self.store_hash_object() != ""
+                return self.store_hash_object(ob_obj) != ""
 
         # For transaction objects
         elif ob["type"] == "transaction":
             if "height" in ob.keys():
                 ob_obj = CoinbaseTransaction(ob["type"], ob["height"], ob["outputs"])
                 
-                return self.store_hash_object() != ""
+                return self.store_hash_object(ob_obj) != ""
 
             elif self.valid_transaction(ob):
                 ob_obj = TransactionObject(ob["type"], ob["inputs"], ob["outputs"])
                 
-                return self.store_hash_object() != ""
+                return self.store_hash_object(ob_obj) != ""
 
         return True
 
