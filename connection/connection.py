@@ -1,3 +1,6 @@
+from txobject import BlockObject, TransactionObject, CoinbaseTransaction
+from peer import Peer
+import utils
 import asyncio
 import copy
 import ipaddress
@@ -17,11 +20,9 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 
-import utils
-from peer import Peer
-from txobject import BlockObject, TransactionObject, CoinbaseTransaction
 
 CURR_OBJ_HASH = ""
+
 
 class Connection:
     FORMAT = 'utf-8'
@@ -194,17 +195,17 @@ class Connection:
             return False
 
         return True
-    
+
     def valid_transaction(self, ob) -> bool:
         """ Check if valid transaction. If not, send error message """
         # Could maybe move this functionality to utils?
 
         if not self.check_msg_format(ob, 3, ["type", "inputs", "outputs"], "message of type 'transaction' has wrong format"):
             return False
-        
+
         # The message that is signed is the plaintext transaction with null as signature?
         signatures = []
-        plaintext = copy.deepcopy(ob) 
+        plaintext = copy.deepcopy(ob)
         for inp in plaintext["inputs"]:
             inp["sig"] = None
         plaintext = str(plaintext)
@@ -220,19 +221,19 @@ class Connection:
             outpoint = input["outpoint"]
             if not self.check_msg_format(outpoint, 2, ["txid", "index"], "message of type 'transaction' has wrong format"):
                 return False
-            
+
             txid = outpoint["txid"]
             prev_transaction = TransactionObject("", [], [])
             # Find the transaction the txid is pointing to
             if not txid in utils.object_saver.objects.keys():
                 return False
-            
+
             prev_transaction: "TransactionObject|CoinbaseTransaction" = utils.object_saver.objects[txid] # type: ignore
 
             index = outpoint["index"]
             if (index > len(prev_transaction.outputs) - 1):
                 return False
- 
+
             signatures.append(input["sig"])
             input_sum += sum(map(lambda output: int(output["value"]), prev_transaction.outputs))
         
@@ -242,15 +243,15 @@ class Connection:
         for output in outputs:
             if not self.check_msg_format(output, 2, ["pubkey", "value"], "message of type 'transaction' has wrong format"):
                 return False
-            
+
             if int(output["value"]) < 0:
                 return False
-            
+
             # b) For each input, verify the signature. Our protocol uses ed25519 signatures.
             i = outputs.index(output)
             pubkey = output["pubkey"]
             verifying_key = ed25519.VerifyingKey(pubkey, encoding="hex")
-            try: 
+            try:
                 # uses pub key on the plaintext transaction message, with sign = null
                 verifying_key.verify(signatures[i], plaintext, encoding='hex')
                 print("The signature is valid.")
@@ -260,7 +261,7 @@ class Connection:
 
             output_sum += int(output["value"])
 
-        # TODO: d) Transactions must respect the law of conservation, i.e. the sum of all input values 
+        # TODO: d) Transactions must respect the law of conservation, i.e. the sum of all input values
         # is at least the sum of output values
 
         # for tx in inputs:
@@ -285,8 +286,8 @@ class Connection:
 
     def gossip_object(self, ob_hash) -> bool:
         return self.send_message({
-                "type": "ihaveobject",
-                "objectid": ob_hash
+            "type": "ihaveobject",
+            "objectid": ob_hash
         })
 
     def send_object(self, msg) -> bool:
@@ -295,25 +296,18 @@ class Connection:
         if not self.check_msg_format(msg, 2, ["objectid"], "getobject has wrong format"):
             return False
 
-        ob_hash:str = msg["objectid"]
+        ob_hash: str = msg["objectid"]
         if ob_hash in utils.object_saver.objects:
-            obj: "BlockObject | None" = utils.object_saver.objects.get(ob_hash)  # type: ignore
+            obj: "BlockObject | CoinbaseTransaction | TransactionObject | None" = utils.object_saver.objects.get(ob_hash)  # type: ignore
 
-            #maybe add a sanity check here?
+            # maybe add a sanity check here?
             if (obj is None):
                utils.printer.printout("The hash doesn't exist in our database")
                return False
 
             return self.send_message({
                 "type": "object",
-                "object": {
-                    "type": obj.type,
-                    "txids": obj.txids,
-                    "nonce": obj.nonce,
-                    "previd": obj.previd,
-                    "created": obj.created,
-                    "T": obj.T
-                }
+                "object": obj.asdict()
             })
 
         return True
@@ -324,7 +318,7 @@ class Connection:
         if not self.check_msg_format(msg, 2, ["objectid"], "ihaveobject has wrong format"):
             return False
 
-        ob_hash:str = msg["objectid"]
+        ob_hash: str = msg["objectid"]
         if ob_hash not in utils.object_saver.objects:
             return self.send_message({
                 "type": "getobject",
@@ -332,7 +326,7 @@ class Connection:
             })
 
         return True
-    
+
     def store_hash_object(self, ob_obj: "BlockObject|TransactionObject|CoinbaseTransaction") -> str:
         # Generate the hash value
         ob_hash = ob_obj.sha256()
@@ -343,10 +337,10 @@ class Connection:
         if ob_hash not in utils.object_saver.objects:
             obj_mapping = [(ob_hash, ob_obj)]
             utils.object_saver.add_object(obj_mapping)
-            
+
             # Gossip it
             threading.Thread(target=self.object_got, args=(ob_hash))
-        
+
         return ob_hash
 
     def receive_object(self, msg) -> bool:

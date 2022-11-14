@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict
-from typing import Any, List
+from typing import Any, List, Dict
 import json
 
 from hashlib import sha256 
@@ -23,6 +23,9 @@ class BlockObject:
     def __hash__(self) -> int:
         return int(self.sha256(), base=16)
 
+    def asdict(self) -> Dict[str, Any]:
+        return asdict(self)
+
     def sha256(self):
         return sha256(canonicalize(asdict(self))).hexdigest()  # type: ignore
 
@@ -38,6 +41,10 @@ class TransactionObject:
     def __hash__(self) -> int:
         return int(self.sha256(), base=16)
 
+    def asdict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
     def sha256(self):
         return sha256(canonicalize(asdict(self))).hexdigest() # type: ignore
 
@@ -52,6 +59,9 @@ class CoinbaseTransaction:
 
     def __hash__(self) -> int:
         return int(self.sha256(), base=16)
+
+    def asdict(self) -> Dict[str, Any]:
+        return asdict(self)
 
     def sha256(self):
         return sha256(canonicalize(asdict(self))).hexdigest()  # type: ignore
