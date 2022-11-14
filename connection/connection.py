@@ -20,7 +20,7 @@ sys.path.append(parent)
 
 import utils
 from peer import Peer
-from txobject import TxObject, TransactionObject, CoinbaseTransaction
+from txobject import BlockObject, TransactionObject, CoinbaseTransaction
 from hashlib import sha256
 
 CURR_OBJ_HASH = ""
@@ -230,16 +230,16 @@ class Connection:
                 return False
             
             txid = outpoint["txid"]
-            prev_transaction = 0
+            prev_transaction = TransactionObject("", [], [])
             # Find the transaction the txid is pointing to
             if txid not in utils.object_saver.objects:
                 return False
             
             # TODO replace it here with a hash
-            prev_transaction = utils.object_saver.objects[txid]
+            prev_transaction: "TransactionObject|CoinbaseTransaction" = utils.object_saver.objects[txid]  # type: ignore
 
             index = outpoint["index"]
-            if index > len(prev_transaction.outputs) - 1:
+            if (index > len(prev_transaction.outputs) - 1):
                 return False
  
             signatures.append(input["sig"])
@@ -310,7 +310,7 @@ class Connection:
 
         ob_hash:str = msg["objectid"]
         if ob_hash in utils.object_saver.objects:
-            obj: "TxObject | None" = utils.object_saver.objects.get(ob_hash)
+            obj: "BlockObject | None" = utils.object_saver.objects.get(ob_hash)  # type: ignore
 
             #maybe add a sanity check here?
             if (obj is None):
@@ -362,7 +362,7 @@ class Connection:
         # For block objects
         if ob["type"] == "block":
             if self.check_msg_format(ob, 6, ["type", "txids", "nonce", "previd", "created", "T"], "message of type 'object' has wrong format"):
-                ob_obj = TxObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
+                ob_obj = BlockObject(ob["type"], ob["txids"], ob["nonce"], ob["previd"], ob["created"], ob["T"])
 
                 # Generate the hash value
                 ob_hash = sha256(str(ob_obj).encode('utf-8')).hexdigest()
@@ -373,7 +373,7 @@ class Connection:
                 if ob_hash not in utils.object_saver.objects:
                     obj_mapping = [(ob_hash, ob_obj)]
                     utils.object_saver.add_object(obj_mapping)
-                    # TODO: Gossip it
+                    # Gossip it
                     
                     threading.Thread(target=self.object_got, args=(ob_hash))
         
@@ -382,13 +382,20 @@ class Connection:
             if "height" in ob.keys():
                 ob_obj = CoinbaseTransaction(ob["type"], ob["height"], ob["outputs"])
                 # What do we want as the key for a coinbase transaction?
+                
+                # TODO replace the strange keys with hashing
                 obj_mapping = [(str(ob["height"]) + ob["outputs"][0]["pubkey"], ob_obj)]
                 utils.object_saver.add_object(obj_mapping)
 
+                #threading.Thread(target=self.object_got, args=(ob_hash))
+
             elif self.valid_transaction(ob):
                 ob_obj = TransactionObject(ob["type"], ob["inputs"], ob["outputs"])
+                # TODO replace the strange keys with hashing
                 obj_mapping = [(ob["inputs"][0]["outpoint"]["txid"], ob_obj)]
                 utils.object_saver.add_object(obj_mapping)
+
+                # threading.Thread(target=self.object_got, args=(ob_hash))
 
         return True
 

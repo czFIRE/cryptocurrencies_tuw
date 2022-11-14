@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 
 from peer import Peer
-from txobject import TxObject
+from txobject import BlockObject, CoinbaseTransaction, TransactionObject
 
 load_dotenv()
 PRODUCTION = os.getenv('PRODUCTION', default=True) == 'True'
@@ -105,7 +105,7 @@ class ObjectSaver:
     """Used for saving and loading received objects"""
 
     obj_lock = Lock()
-    objects: Dict[(str, TxObject)] = {}
+    objects: Dict[(str, "BlockObject|CoinbaseTransaction|TransactionObject")] = {}
 
     # handle file overwriting in a nice way
     def __init__(self, file_location: str) -> None:
