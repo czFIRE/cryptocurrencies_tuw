@@ -7,7 +7,6 @@ import time
 import ed25519
 
 import threading
-import math
 
 # setting path
 import sys
@@ -28,7 +27,7 @@ CURR_OBJ_HASH = ""
 class Connection:
     FORMAT = 'utf-8'
 
-    last_hash = ""
+    last_hash = "b"
     curr_hash = "a"
 
     cv = threading.Condition()
@@ -40,25 +39,17 @@ class Connection:
 
     def __del__(self) -> None:
         """ close the connection when out of scope or destroyed """
-        utils.printer.printout("Closing connection")
+        utils.printer.printout("Closing connection on thread " + str(threading.get_ident()))
         self.conn.close()
 
     def object_got(self, ob_hash: str):
         CURR_OBJ_HASH = ob_hash
 
-        self.curr_hash = ob_hash
-           # Gossip object to peers
-        #self.gossip_object(ob_hash)
-
         self.cv.notify_all()
-
-            # this is a hack I'm ashamed of
-        time.sleep(0.15)
-
-        CURR_OBJ_HASH = ""
 
     def broadcast_object(self):
         while True:
+            self.curr_hash = CURR_OBJ_HASH
             self.cv.wait_for(lambda: self.last_hash != self.curr_hash)
             self.last_hash = self.curr_hash
             self.gossip_object(self.last_hash)
