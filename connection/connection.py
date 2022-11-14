@@ -283,18 +283,11 @@ class Connection:
             return False
         return True
 
-    def gossip_object(self, ob_hash) -> int:
-        obj_message = {
+    def gossip_object(self, ob_hash) -> bool:
+        return self.send_message({
                 "type": "ihaveobject",
                 "objectid": ob_hash
-        }
-
-        msg = json.dumps(obj_message) + "\n"
-        message = msg.encode(self.FORMAT)
-        utils.printer.printout("[SENT] " + msg)
-
-        # FIX: broadcast to all, might need to loop through all clients
-        return self.conn.sendto(message, ('<broadcast>', self.addr[1]))
+        })
 
     def send_object(self, msg) -> bool:
         """Triggered by 'getobject'. Send back the requested object if we have it in db"""
