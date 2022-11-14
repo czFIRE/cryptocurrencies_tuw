@@ -16,6 +16,8 @@ class Node:
     #SERVER = socket.gethostbyname('localhost')
     ADDR = (SERVER, PORT)
 
+    PRODUCTION = os.getenv('PRODUCTION', default=True) == 'True'
+
     # thread_arr = []
 
     def __init__(self) -> None:
@@ -48,7 +50,7 @@ class Node:
     def peer_discovery(self) -> None:
 
         # Bootstrapping node and 3 other random peers from tuwel
-        hardcoded_peers = [("128.130.122.101", 18018), ("139.59.206.226", 18018), ("138.68.112.193", 18018)]
+        hardcoded_peers = [("128.130.122.101", 18018)] if self.PRODUCTION else [("128.130.122.101", 18018), ("139.59.206.226", 18018), ("138.68.112.193", 18018)]
 
         for i in hardcoded_peers:
             host = i[0]
