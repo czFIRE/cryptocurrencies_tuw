@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 # A client for testing our functionality, not used in Production
 
-HOST = socket.gethostname()  # The server's hostname or IP address
+HOST = socket.gethostbyname('localhost')  # The server's hostname or IP address
 load_dotenv()
 PORT = int(os.getenv('PORT', default=18018))  # The port used by the server
 
@@ -34,6 +34,24 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         }
     }) + "\n"
 
+    json_transaction = json.dumps({
+        "type": "object",
+        "object": {
+            "type":"transaction", 
+            "inputs":[{
+                "outpoint": {
+                    "txid": "f71408bf847d7dd15824574a7cd4afdfaaa2866286910675cd3fc371507aa196" ,
+                    "index": 0 
+                    },
+                "sig":"3869a9ea9e7ed926a7c8b30fb71f6ed151a132b03fd5dae764f015c98271000e7da322dbcfc97af7931c23c0fae060e102446ccff0f54ec00f9978f3a69a6f0f"
+                }],
+            "outputs": [{
+                "pubkey": "077a2683d776a71139fd4db4d00c16703ba0753fc8bdc4bd6fc56614e659cde3" ,
+                "value": 5100000000 
+                }] 
+            }
+     }) + "\n"
+
     s.connect((HOST, PORT))
 
     part1 = json_message[0:15]
@@ -59,6 +77,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     byte = json_object.encode('utf-8')
     print("Send: " + json_object)
     s.send(byte)
+
+    byte2 = json_transaction.encode('utf-8')
+    print("Send: " + json_transaction)
+    s.send(byte2)
 
     while True:
         data = s.recv(1024)
