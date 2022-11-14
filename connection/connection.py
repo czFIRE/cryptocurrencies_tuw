@@ -235,7 +235,7 @@ class Connection:
             if not txid in utils.object_saver.objects.keys():
                 return False
             
-            prev_transaction = utils.object_saver.objects[txid]
+            prev_transaction: "TransactionObject|CoinbaseTransaction" = utils.object_saver.objects[txid] # type: ignore
 
             index = outpoint["index"]
             if (index > len(prev_transaction.outputs) - 1):
