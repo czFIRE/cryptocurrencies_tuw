@@ -7,7 +7,7 @@ from peers.Peer import Peer
 
 
 def error_msg(error_str) -> json:
-    return {"type": "error", "error": error_str}
+    return {"type": "error", "error": error_str}  # type: ignore
 
 
 def hello_msg() -> json:

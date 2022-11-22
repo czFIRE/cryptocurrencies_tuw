@@ -17,12 +17,12 @@ def _validate_normal_transaction(tx: Transaction) -> bool:
     # 2a) For each input, ...
     for input in tx.inputs:
         # 2a) ... ensure that a valid transaction with the given txid exists in your object database.
-        prev_tx_str = DB_MANAGER.get_tx_obj(input["outpoint"]["txid"])
+        prev_tx_str = DB_MANAGER.get_tx_obj(input["outpoint"]["txid"])  # type: ignore
         if not prev_tx_str:
             return False
 
         # 2a) ... ensure that the given index is less than the number of outputs in the outpoint transaction.
-        index = input["outpoint"]["index"]
+        index = input["outpoint"]["index"]  # type: ignore
         prev_tx = json.loads(prev_tx_str)
 
         if index >= len(prev_tx["outputs"]):
@@ -31,13 +31,13 @@ def _validate_normal_transaction(tx: Transaction) -> bool:
         output = prev_tx["outputs"][index]
 
         # 2b) ... verify the signature (ed25519)
-        verify_key = VerifyKey(output["pubkey"], encoder=HexEncoder)
-        signature_bytes = HexEncoder.decode(input["sig"])
+        verify_key = VerifyKey(output["pubkey"], encoder=HexEncoder)  # type: ignore
+        signature_bytes = HexEncoder.decode(input["sig"])  # type: ignore
 
         # Signatures are created on the plaintext which consists of the transaction they are contained within,
         # except that the sig values are all replaced with null.
-        signed_bytes = re.sub(r'\"sig\":\"[0-9a-f]{128}\"', '"sig":null',
-                              mk_canonical_json_str(Transaction.to_json(tx))).encode()
+        signed_bytes = re.sub(r'\"sig\":\"[0-9a-f]{128}\"', '"sig":null',  # type: ignore
+                              mk_canonical_json_str(Transaction.to_json(tx))).encode()  # type: ignore
 
         try:
             verify_key.verify(signed_bytes, signature_bytes)
@@ -49,7 +49,7 @@ def _validate_normal_transaction(tx: Transaction) -> bool:
 
     # 2d) Transactions must respect the law of conservation, i.e. the sum of all input values is at least
     # the sum of output values.
-    sum_outputs = sum(output["value"] for output in tx.outputs)
+    sum_outputs = sum(output["value"] for output in tx.outputs)  # type: ignore
     if sum_inputs < sum_outputs:
         return False
 
@@ -76,3 +76,5 @@ def validate_object(obj: Type[Object]) -> bool:
         case Block():
             # For this homework, you may consider blocks and coinbase transactions to always be valid.
             return True
+
+    return False

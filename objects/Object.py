@@ -10,20 +10,20 @@ class Object:
         self.object_id = None
 
     def __str__(self):
-        return mk_canonical_json_str(self.__dict__)
+        return mk_canonical_json_str(self.__dict__)  # type: ignore
 
     def __repr__(self):
         return self.__str__()
 
     def generate_obj_id(self):
-        json_str = mk_canonical_json_str(Object.to_json(self))
+        json_str = mk_canonical_json_str(Object.to_json(self))  # type: ignore
         self.object_id = hashlib.sha256(json_str.encode()).hexdigest()
 
     # removes None variables from JSON (maybe check if always filtering correctly)
     @staticmethod
-    def to_json(obj) -> json:
+    def to_json(obj) -> json:  # type: ignore
         excluded_fields = ["object_id"]
         included_fields = ["previd", "txids"]
-        return {key: value for key, value in obj.__dict__.items()
+        return {key: value for key, value in obj.__dict__.items()  # type: ignore
                 if ((value or value == 0) and key not in excluded_fields)
                 or key in included_fields}

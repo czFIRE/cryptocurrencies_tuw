@@ -55,7 +55,7 @@ class DbManager:
         result = self._db_cur.execute("SELECT * FROM known_peers ORDER BY RANDOM() LIMIT ?", (amount,))
         return [Peer(p[0], p[1]) for p in result.fetchall()]
 
-    def get_object(self, object_id: str) -> Object:
+    def get_object(self, object_id: str) -> "Object|None":
         result = self._db_cur.execute("SELECT * FROM objects WHERE object_id = ?", (object_id,)).fetchone()
 
         if result:
@@ -81,15 +81,15 @@ class DbManager:
             #has_been_added = self._db_cur.rowcount
 
             if obj.type == "block":
-                self._db_cur.execute("INSERT OR IGNORE INTO blocks VALUES(NULL, ?, ?)", (obj.object_id, mk_canonical_json_str(Block.to_json(obj))))
+                self._db_cur.execute("INSERT OR IGNORE INTO blocks VALUES(NULL, ?, ?)", (obj.object_id, mk_canonical_json_str(Block.to_json(obj))))  # type: ignore
             elif obj.type == "transaction":
-                self._db_cur.execute("INSERT OR IGNORE INTO transactions VALUES (NULL, ?, ?)", (obj.object_id, mk_canonical_json_str(Transaction.to_json(obj))))
+                self._db_cur.execute("INSERT OR IGNORE INTO transactions VALUES (NULL, ?, ?)", (obj.object_id, mk_canonical_json_str(Transaction.to_json(obj))))  # type: ignore
 
             self._db_con.commit()
 
         return not has_been_added
 
-    def get_tx_obj(self, object_id: str) -> str:
+    def get_tx_obj(self, object_id: str) -> "str | None":
         result = self._db_cur.execute("SELECT tx_obj_str FROM transactions WHERE object_id = ?", (object_id,)).fetchone()
         return result[0] if result else None
 

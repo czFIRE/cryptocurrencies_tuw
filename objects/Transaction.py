@@ -4,7 +4,7 @@ from objects.Object import Object
 
 
 class Transaction(Object):
-    def __init__(self, outputs: list[json], height: int = None, inputs: list[json] = None):
+    def __init__(self, outputs: list[json], height: int = None, inputs: list[json] = None):  # type: ignore
         super().__init__("transaction")
 
         if height is None and not inputs:
@@ -18,14 +18,14 @@ class Transaction(Object):
         self.generate_obj_id()
 
     @classmethod
-    def load_from_json(cls, json_data: json):
-        if "height" in json_data:
+    def load_from_json(cls, json_data: json):  # type: ignore
+        if "height" in json_data:  # type: ignore
             return cls(
-                outputs=json_data["outputs"],
-                height=json_data["height"]
+                outputs=json_data["outputs"],  # type: ignore
+                height=json_data["height"]  # type: ignore
             )
 
         return cls(
-            outputs=json_data["outputs"],
-            inputs=json_data["inputs"]
+            outputs=json_data["outputs"],  # type: ignore
+            inputs=json_data["inputs"]  # type: ignore
         )

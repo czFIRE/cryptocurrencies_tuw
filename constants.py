@@ -3,10 +3,15 @@ from sys import platform
 
 from peers.Peer import Peer
 
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
 HOST = "localhost" if platform in ["win32", "cygwin"] else "0.0.0.0"
-PORT = 18018
+PORT = int(os.getenv('PORT', default=18018))
 VERSION = '0.8.0'
-AGENT = 'Byzantine Node'
+AGENT = os.getenv('NODE_NAME', default="Fun_node_name")
 
 SERVICE_LOOP_DELAY = 10
 LOW_CONNECTION_THRESHOLD = 3

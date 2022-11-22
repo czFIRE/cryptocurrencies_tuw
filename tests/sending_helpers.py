@@ -35,7 +35,7 @@ class SendingHelper:
         print(f"Received: {received}")
         return received
 
-    async def send_request(self, messages: list[json], expected_responses: list[str], should_disconnect: bool = False):
+    async def send_request(self, messages: list[json], expected_responses: list[str], should_disconnect: bool = False):  # type: ignore
         assert len(messages) == len(expected_responses), "Must be same length"
         reader, writer = await asyncio.open_connection(self.test_ip, PORT)
         for msg, expected_response in zip(messages, expected_responses):

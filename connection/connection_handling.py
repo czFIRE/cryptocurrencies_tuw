@@ -23,7 +23,8 @@ def add_connection(peer: Peer, writer: StreamWriter):
 
 def del_connection(peer: Peer):
     writer = CONNECTIONS.pop(peer, None)
-    writer.close()
+    if (writer is not None):
+        writer.close()
     DB_MANAGER.remove_peer(peer)
 
 
@@ -42,8 +43,8 @@ async def handle_connection(reader: StreamReader, writer: StreamWriter):
 
     try:
         # Initial Handshake
-        await write_msg(writer, build.hello_msg())
-        await write_msg(writer, build.getpeers_msg())
+        await write_msg(writer, build.hello_msg())  # type: ignore
+        await write_msg(writer, build.getpeers_msg())  # type: ignore
 
         first_msg_bytes = await asyncio.wait_for(reader.readline(), timeout=const.HELLO_MSG_TIMEOUT)
         log.info(f"Received message from peer {peer}")
@@ -59,18 +60,19 @@ async def handle_connection(reader: StreamReader, writer: StreamWriter):
             log.info(f"Received message from peer {peer}")
 
             msg_type, msg = validate_message(msg_bytes)
-            await handle_msg(writer, msg_type, msg, peer)
+            await handle_msg(writer, msg_type, msg, peer)  # type: ignore
 
     except asyncio.exceptions.TimeoutError:
         log.info(f"Peer {peer} timed out...")
     except ErrorMsgException:
-        log.error(f"Received 'Error' message from peer {peer}. Error: {msg['error']}")
+        tmp = "MSG is None" if msg is None else msg['error']  # type: ignore
+        log.error(f"Received 'Error' message from peer {peer}. Error: {tmp}")
     except MessageException as e:
         log.info(f"Message from peer {peer} produced error. Error: {e}")
         log.debug(f'The message was: {msg}')
         try:
             log.debug(f"Sending 'Error' message to {peer}")
-            await write_msg(writer, build.error_msg(str(e)))
+            await write_msg(writer, build.error_msg(str(e)))  # type: ignore
             log.info(f"'Error' message send to {peer}")
         except Exception as e:
             log.error(f"Could not send 'Error' message to {peer}. Error: {e}")
@@ -81,7 +83,7 @@ async def handle_connection(reader: StreamReader, writer: StreamWriter):
         log.debug(f"The object was: {msg}")
         try:
             log.debug(f"Sending 'Error' message to {peer}")
-            await write_msg(writer, build.error_msg(str(e)))
+            await write_msg(writer, build.error_msg(str(e)))  # type: ignore
             log.info(f"'Error' message send to {peer}")
         except Exception as e:
             log.error(f"Could not send 'Error' message to {peer}. Error: {e}")
@@ -90,7 +92,7 @@ async def handle_connection(reader: StreamReader, writer: StreamWriter):
         log.debug(f"The message was: {msg_bytes}")
         try:
             log.debug(f"Sending 'Error' message to {peer}")
-            await write_msg(writer, build.error_msg("Message is not a valid JSON document"))
+            await write_msg(writer, build.error_msg("Message is not a valid JSON document"))  # type: ignore
             log.info(f"'Error' message send to {peer}")
         except Exception as e:
             log.error(f"Could not send 'Error' message to {peer}. Error: {e}")
@@ -99,7 +101,7 @@ async def handle_connection(reader: StreamReader, writer: StreamWriter):
         log.debug(f"The message was: {msg_bytes}")
         try:
             log.debug(f"Sending 'Error' message to {peer}")
-            await write_msg(writer, build.error_msg("Message is invalid"))
+            await write_msg(writer, build.error_msg("Message is invalid"))  # type: ignore
             log.info(f"'Error' message send to {peer}")
         except Exception as e:
             log.error(f"Could not send 'Error' message to {peer}. Error: {e}")
@@ -131,7 +133,7 @@ async def bootstrap():
     # Request Genesis Block
     while len(CONNECTIONS.items()) == 0:
         await asyncio.sleep(0.1)
-    await write_msg(CONNECTIONS[const.BOOTSTRAP_NODE], build.getobject_msg(const.OBJECT_ID_GENESIS_BLOCK))
+    await write_msg(CONNECTIONS[const.BOOTSTRAP_NODE], build.getobject_msg(const.OBJECT_ID_GENESIS_BLOCK))  # type: ignore
     log.info("Requested Genesis Block from Bootstrap Node")
 
 
