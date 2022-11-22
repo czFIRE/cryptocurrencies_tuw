@@ -1,3 +1,12 @@
+peers.txt
+
+# IntelliJ
+.idea/
+
+# Database
+*.db
+*.db-journal
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -128,15 +137,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# VS Code
-.vscode/
-.vs/
+kerma_peer_list.txt
 
+/crypto-node
 
-# testing file
-test.py
-peer_db.json
-peer_db.pickle
-log.txt
-obj_db.pickle
-tester.py
+.DS_Store
+

@@ -1,80 +1,67 @@
-import socket
-import threading
-import os
-from dotenv import load_dotenv
-from connection.serverConnection import ServerConnection
-from connection.clientConnection import ClientConnection
-import utils
-
 import asyncio
+import time
+import constants as const
+import logging as log
 
+from datetime import timedelta
+from global_variables import CONNECTIONS, DB_MANAGER
+from connection.connection_handling import bootstrap, listen, resupply_connections
 
-class Node:
-    load_dotenv()
-    PORT = int(os.getenv('PORT', default=18018))
-    SERVER = socket.gethostname()  # needs to be like this, socket.gethostbyname('localhost') would not make the server available to clients
-    #SERVER = socket.gethostbyname('localhost')
-    ADDR = (SERVER, PORT)
-
-    PRODUCTION = os.getenv('PRODUCTION', default=True) == 'True'
-
-    # thread_arr = []
-
-    def __init__(self) -> None:
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind(self.ADDR)
-        utils.printer.printout("Server at " + self.SERVER + " Port " + str(self.PORT))
-
-    def __del__(self) -> None:
-        self.server.close()
-
-    async def start(self) -> None:
-        self.peer_discovery()
-        self.server.listen()  # Listen to new connections
-        while True:
-            conn, addr = self.server.accept()  # blocking
-            conn.setblocking(False)
-
-            # run function in new thread. Don't forget to close threads on exit -> add to __del__ of node class
-            thread = threading.Thread(target=asyncio.run, args=(self.handle_connection(conn, addr),))
-            # self.thread_arr.append(thread)
-            thread.start()
-            utils.printer.printout(
-                f"[ACTIVE CONNECTIONS] {threading.active_count() - 2}")  # Main thread is always running, therefore substract 1, also saver thread, so substract 2
-
-    async def handle_connection(self, conn, addr) -> None:
-        connectio = ServerConnection(conn, addr)
-        await connectio.handle_client()
-
-    # Connect to all hardcoded peers
-    def peer_discovery(self) -> None:
-
-        # Bootstrapping node and 3 other random peers from tuwel
-        hardcoded_peers = [("128.130.122.101", 18018)] if self.PRODUCTION else [("128.130.122.101", 18018), ("139.59.206.226", 18018), ("138.68.112.193", 18018)]
-
-        for i in hardcoded_peers:
-            host = i[0]
-            port = i[1]
-
-            # threading.Thread(target=asyncio.run, args=(self.connect_to_peer(host, port, None)))
-            thread = threading.Thread(target=asyncio.run, args=(self.connect_to_peer(host, port, None),))
-            thread.start()
-
-    # Start a connection to the peer at the given host and port
-    async def connect_to_peer(self, host: str, port: int, addr) -> None:
-        con = ClientConnection(host, port, addr)
-        await con.start_client()
-
-
-# Reimplement this as such that this is a class that we run on startup
-# for each client startup connection that handles everything accompanied by it
-# remove global variables and have them as a part of the node class
 
 async def init():
-    utils.printer.printout("[STARTING] server is starting...")
-    node = Node()
-    await node.start()
+    bootstrap_task = asyncio.create_task(bootstrap())
+    listen_task = asyncio.create_task(listen())
+
+    await bootstrap_task
+    return await listen_task
+
+
+async def main():
+    server = await init()
+    start_time = time.time()
+
+    try:
+        async with server:
+            print(f'- Node is up & running @ {const.HOST}')
+
+            # Service loop
+            while True:
+                delta_time = timedelta(seconds=time.time() - start_time)
+                weeks = delta_time.days//7
+                hours = delta_time.seconds//3600
+                minutes = (delta_time.seconds//60)%60
+                seconds = delta_time.seconds - hours*3600 - minutes*60
+
+                uptime_str = ""
+                if weeks:
+                    uptime_str += f'{weeks}w '
+                if delta_time.days:
+                    uptime_str += f'{delta_time.days}d '
+                if hours:
+                    uptime_str += f'{hours}h '
+                if minutes:
+                    uptime_str += f'{minutes}m '
+                uptime_str += f'{seconds}s'
+
+                log.debug(f"New service loop iteration [Total uptime: {uptime_str}]")
+                log.debug(f"Open connections: {list(CONNECTIONS.keys())}")
+
+                # Open more connections if necessary
+                delta_peers = const.LOW_CONNECTION_THRESHOLD - len(CONNECTIONS)
+                if delta_peers > 0:
+                    log.info(f"Too few connections available (currently {len(CONNECTIONS)})")
+                    resupply_connections(delta_peers)
+
+                await asyncio.sleep(const.SERVICE_LOOP_DELAY)
+    except KeyboardInterrupt:
+        await server.wait_closed()
+        server.get_loop().run_until_complete(asyncio.gather(*asyncio.all_tasks()))
+        DB_MANAGER.close_db_connection()
 
 
 if __name__ == "__main__":
-    asyncio.run(init())
+    log.basicConfig(filename='./persist/kerma_node.log', level=log.DEBUG,
+                    format='%(asctime)s | %(levelname)s: %(message)s', force=True)
+
+    print("- Starting Kerma node...")
+    asyncio.run(main())
