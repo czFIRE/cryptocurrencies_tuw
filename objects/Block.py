@@ -1,9 +1,8 @@
 import json
 
-from objects.Object import Object
+from objects.Object import Object as Object_
 
-
-class Block(Object):
+class Block(Object_):
     def __init__(self, txids: list[str], nonce: str, previd: str, created: int, t: str, miner: str = "undefined",
                  note: "str|None" = None):
         super().__init__("block")

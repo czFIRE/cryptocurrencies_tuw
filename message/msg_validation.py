@@ -23,8 +23,11 @@ def validate_message_schema(msg: json):  # type: ignore
                 jsonschema.validate(msg, schema=getobject_msg.schema)
             case 'getchaintip':
                 pass
+            case 'chaintip':
+                pass
             case 'getmempool':
                 pass
+
             case _:
                 raise jsonschema.ValidationError('Unknown message type')
         return msg['type']  # type: ignore

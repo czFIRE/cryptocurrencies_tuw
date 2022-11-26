@@ -86,6 +86,8 @@ class DbManager:
                 self._db_cur.execute("INSERT OR IGNORE INTO transactions VALUES (NULL, ?, ?)", (obj.object_id, mk_canonical_json_str(Transaction.to_json(obj))))  # type: ignore
 
             self._db_con.commit()
+        else:
+            log.info(f"Received Object ID {obj.object_id} had already been stored in DB")
 
         return not has_been_added
 

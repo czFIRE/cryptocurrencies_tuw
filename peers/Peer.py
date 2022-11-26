@@ -1,5 +1,6 @@
 import ipaddress
 
+import logging as log
 
 class Peer:
     def __init__(self, host: str, port: int):
@@ -13,7 +14,8 @@ class Peer:
                 # Literal IPv6 Address for specifying ports
                 self.host = f'[{ip.compressed}]'
 
-        except ValueError:
+        except ValueError as e:
+            log.error(f"Invalid IP!, {e}")
             # Not an IP! It's probably a hostname instead....
             self.host = host
 

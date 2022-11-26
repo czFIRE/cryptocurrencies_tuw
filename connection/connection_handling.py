@@ -47,19 +47,23 @@ async def handle_connection(reader: StreamReader, writer: StreamWriter):
         await write_msg(writer, build.getpeers_msg())  # type: ignore
 
         first_msg_bytes = await asyncio.wait_for(reader.readline(), timeout=const.HELLO_MSG_TIMEOUT)
-        log.info(f"Received message from peer {peer}")
+        log.info(f"Received initial message from peer {peer}")
 
         msg_type, first_msg = validate_message(first_msg_bytes)
 
         if not msg_type == 'hello':
             raise UnexpectedMsgException("First message needs to be of type 'hello'")
 
+        log.info(f"Received message from peer {peer} with type {msg_type}")
+
         # Listen for messages...
         while True:
             msg_bytes = await reader.readline()
-            log.info(f"Received message from peer {peer}")
-
             msg_type, msg = validate_message(msg_bytes)
+
+            # TODO check that these changes make sense
+            log.info(f"Received message from peer {peer} with type {msg_type}")
+
             await handle_msg(writer, msg_type, msg, peer)  # type: ignore
 
     except asyncio.exceptions.TimeoutError:
@@ -106,7 +110,11 @@ async def handle_connection(reader: StreamReader, writer: StreamWriter):
         except Exception as e:
             log.error(f"Could not send 'Error' message to {peer}. Error: {e}")
     except ValueError as e:
+        log.error(f"ValueError happened: ")
         log.error(e)
+    
+    # TODO Exception for not being able to find missing TXs => Already in validationException
+    
     except Exception as e:
         log.error(e)
     finally:
@@ -117,7 +125,7 @@ async def handle_connection(reader: StreamReader, writer: StreamWriter):
 async def connect_to_node(peer: Peer):
     try:
         log.info(f"Connecting to {peer}...")
-        reader, writer = await asyncio.open_connection(peer.host, peer.port)
+        reader, writer = await asyncio.open_connection(peer.host, peer.port, limit=1024 * 256) #256KiB vs default 64KiB
     except Exception as e:
         log.error(f"Could not connect to peer {peer}. Error: {e}")
         return

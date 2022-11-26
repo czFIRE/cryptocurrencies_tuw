@@ -52,6 +52,19 @@ def object_msg(app_obj: Object) -> json:
         "object": app_obj.to_json(app_obj)
     }
 
+# TODO: Add Mempool
+
+def getmempool_msg() -> json:
+    return {
+        "type": "getmempool"
+    }
+
+# TODO: Add ChainTip
+
+def getchaintip_msg() -> json:
+    return {
+        "type": "getchaintip"
+    }
 
 def serialize_msg(msg_dict: json) -> str:
     return f"{mk_canonical_json_str(msg_dict)}\n"

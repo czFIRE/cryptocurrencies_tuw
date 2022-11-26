@@ -63,5 +63,16 @@ if __name__ == "__main__":
     log.basicConfig(filename='./persist/kerma_node.log', level=log.DEBUG,
                     format='%(asctime)s | %(levelname)s: %(message)s', force=True)
 
+    # set up logging to console
+    console = log.StreamHandler()
+    console.setLevel(log.DEBUG)
+    # set a format which is simpler for console use
+    formatter = log.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+    console.setFormatter(formatter)
+    # add the handler to the root logger
+    log.getLogger('').addHandler(console)
+
+    logger = log.getLogger(__name__)
+
     print("- Starting Kerma node...")
     asyncio.run(main())

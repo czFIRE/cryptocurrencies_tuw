@@ -16,7 +16,7 @@ class SendingHelper:
     def __init__(self, test_ip):
         self.test_ip = test_ip
 
-    async def _send_request_to_server(self, msg, writer, reader):
+    async def _send_request_to_server(self, msg, writer: StreamWriter, reader: StreamReader):
         data = msg_builder.serialize_msg(msg).encode() if msg and not isinstance(msg, bytes) else msg
         print(f"Sending {data}")
         writer.write(data)
