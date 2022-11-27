@@ -7,7 +7,7 @@ from peers.Peer import Peer
 
 
 def error_msg(error_str) -> json:
-    return {"type": "error", "error": error_str}  # type: ignore
+    return {"type": "error", "error": error_str}
 
 
 def hello_msg() -> json:
@@ -52,6 +52,7 @@ def object_msg(app_obj: Object) -> json:
         "object": app_obj.to_json(app_obj)
     }
 
+
 # TODO: Add Mempool
 
 def getmempool_msg() -> json:
@@ -59,12 +60,14 @@ def getmempool_msg() -> json:
         "type": "getmempool"
     }
 
+
 # TODO: Add ChainTip
 
 def getchaintip_msg() -> json:
     return {
         "type": "getchaintip"
     }
+
 
 def serialize_msg(msg_dict: json) -> str:
     return f"{mk_canonical_json_str(msg_dict)}\n"
