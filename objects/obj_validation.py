@@ -22,7 +22,8 @@ import time
 
 from peers.Peer import Peer
 
-current_block_transactions: dict[Peer,list[str]] = {}
+#current_block_transactions: dict[Peer,list[str]] = {}
+#current_block_transactions: tuple[int, Block] = (0, Block([], "", "", 0, ""))
 
 async def write_msg(writer: StreamWriter, msg_dict: json):  # function copied from message.msg_handling.py
     msg_str = serialize_msg(msg_dict)
@@ -85,6 +86,7 @@ async def _validate_transaction(tx: Transaction, peer: Peer) -> bool:
         # For now, assume that a coinbase transaction is always valid. We will validate these starting in the next
         # homework.
 
+        """
         current_context = copy.deepcopy(current_block_transactions)  # to atleast fix it for this checking - it can change
 
         if (peer in current_context):           # do we have anything from this peer in the storage?
@@ -96,8 +98,9 @@ async def _validate_transaction(tx: Transaction, peer: Peer) -> bool:
                         return False
 
                 return await validate_coinbase_transactions(txids) # TODO - what to add here?!?!?!?!?!?!?!?!?!?!??!?!?! Does this work?!?! - should now, but still scatchy 
+        """
 
-        return False    # we can't check it's validity
+        return True    # we can't check it's validity
 
     # Normal Transaction
     return _validate_normal_transaction(tx)
@@ -182,7 +185,10 @@ def get_input_sum(transaction: Transaction) -> int:
         input_id = tx_input["outpoint"]["txid"]
         # TODO do we have all of these transactions?
         tmp = Transaction.load_from_json(DB_MANAGER.get_tx_obj(input_id))
-        input_sum += tmp.outputs[tx_input["outpoint"]["index"]]
+        input_sum += tmp.outputs[int(tx_input["outpoint"]["index"])]["value"]  # TODO - I corrected this, check if this is correct 
+
+        # tx_input.outpoint.index
+        # tx.outputs[x].value
 
     return input_sum
 
@@ -231,12 +237,14 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
         return True
 
     # Check if we are missing some transactions and request them if so
-    missing_tx_ids = await are_missing_txs(block.txids)
+    missing_tx_ids = are_missing_txs(reversed(block.txids))
     orig_missing_tx_ids = copy.deepcopy(missing_tx_ids)
 
+    """
     global current_block_transactions
     current_block_transactions[peer] = block.txids # TODO - this will break if we receive more block objects at the same time => we can solve this by technically creating a thread that will remember that for this instance 
                                                    # atleast now it doesn't break for multiple peers, but still breaks if the one sent us more objects at the same time
+    """
 
     if len(missing_tx_ids) > 0:
         await request_missing_txs(missing_tx_ids)
@@ -245,9 +253,9 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
     start_time = time.time()
     while time.time() - start_time < TRANSACTIONS_ASKING_TIMEOUT and len(missing_tx_ids) > 0:
         await asyncio.sleep(0.1)
-        missing_tx_ids = await are_missing_txs(orig_missing_tx_ids) # can be optimalised by using missing_tx_ids
+        missing_tx_ids = are_missing_txs(orig_missing_tx_ids) # can be optimalised by using missing_tx_ids
 
-    missing_tx_ids = await are_missing_txs(orig_missing_tx_ids) # can be optimalised by using missing_tx_ids
+    missing_tx_ids = are_missing_txs(orig_missing_tx_ids) # can be optimalised by using missing_tx_ids
     if len(missing_tx_ids) > 0:
         log.error(f"{len(missing_tx_ids)} transaction(s) couldn't be found!")
         # TODO should we remove the added transactions from this block?
