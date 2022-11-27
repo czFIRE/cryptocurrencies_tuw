@@ -5,6 +5,7 @@ import os
 from peers.Peer import Peer
 from objects.Object import Object
 from objects.Block import Block
+from objects.UtxoSet import UtxoSet
 from objects.Transaction import Transaction
 from utils.json_builder import mk_canonical_json_str
 
@@ -25,7 +26,8 @@ class DbManager:
     def add_peers(self, peers_to_add: list[Peer]):
         if peers_to_add:
             if len(peers_to_add) > 1:
-                self._db_cur.executemany("INSERT OR IGNORE INTO known_peers VALUES(?, ?)", [p.to_tuple() for p in peers_to_add])
+                self._db_cur.executemany("INSERT OR IGNORE INTO known_peers VALUES(?, ?)",
+                                         [p.to_tuple() for p in peers_to_add])
             else:
                 self._db_cur.execute("INSERT OR IGNORE INTO known_peers VALUES(?, ?)", peers_to_add[0].to_tuple())
 
@@ -33,7 +35,7 @@ class DbManager:
 
             # TODO: Maybe fix this if we ever switch to a DBMS
             log.debug("Inserted new peers into DB")
-            #if self._db_cur.rowcount > 0:
+            # if self._db_cur.rowcount > 0:
             #    log.debug(f"Discovered {self._db_cur.rowcount} new peers.")
 
     def remove_peer(self, peer: Peer):
@@ -42,10 +44,10 @@ class DbManager:
 
         # TODO: Maybe fix this if we ever switch to a DBMS
         log.debug(f"Removed peer {peer} from DB")
-        #if self._db_cur.rowcount > 0:
+        # if self._db_cur.rowcount > 0:
         #    log.debug(f"Removed peer {peer} from list of known peers.")
         #    return
-        #log.debug(f"Couldn't remove peer {peer} because they already were not in the list of known peers.")
+        # log.debug(f"Couldn't remove peer {peer} because they already were not in the list of known peers.")
 
     def get_peers(self) -> list[Peer]:
         result = self._db_cur.execute("SELECT * FROM known_peers")
@@ -65,7 +67,8 @@ class DbManager:
                 obj_result = json.loads(obj_result[2])
                 return Block.load_from_json(obj_result)
             elif type == "transaction":
-                obj_result = self._db_cur.execute("SELECT * FROM transactions WHERE object_id = ?", (object_id,)).fetchone()
+                obj_result = self._db_cur.execute("SELECT * FROM transactions WHERE object_id = ?",
+                                                  (object_id,)).fetchone()
                 obj_result = json.loads(obj_result[2])
                 return Transaction.load_from_json(obj_result)
 
@@ -78,12 +81,14 @@ class DbManager:
             self._db_cur.execute("INSERT OR IGNORE INTO objects VALUES(?, ?)", (obj.object_id, obj.type))
 
             # TODO: Maybe fix this if we ever switch to a DBMS
-            #has_been_added = self._db_cur.rowcount
+            # has_been_added = self._db_cur.rowcount
 
             if obj.type == "block":
-                self._db_cur.execute("INSERT OR IGNORE INTO blocks VALUES(NULL, ?, ?)", (obj.object_id, mk_canonical_json_str(Block.to_json(obj))))  # type: ignore
+                self._db_cur.execute("INSERT OR IGNORE INTO blocks VALUES(NULL, ?, ?)",
+                                     (obj.object_id, mk_canonical_json_str(Block.to_json(obj))))  # type: ignore
             elif obj.type == "transaction":
-                self._db_cur.execute("INSERT OR IGNORE INTO transactions VALUES (NULL, ?, ?)", (obj.object_id, mk_canonical_json_str(Transaction.to_json(obj))))  # type: ignore
+                self._db_cur.execute("INSERT OR IGNORE INTO transactions VALUES (NULL, ?, ?)",
+                                     (obj.object_id, mk_canonical_json_str(Transaction.to_json(obj))))  # type: ignore
 
             self._db_con.commit()
         else:
@@ -91,8 +96,18 @@ class DbManager:
 
         return not has_been_added
 
+    def get_utxo_set(self, set_id: str) -> "UtxoSet|None":
+        result = self._db_cur.execute("SELECT tx_obj_str FROM utxo_sets WHERE set_id = ?",
+                                      (set_id,)).fetchone()
+        return result[0] if result else None
+
+    def add_utxo_set(self, obj: UtxoSet) -> bool:
+        self._db_cur.execute("INSERT OR IGNORE INTO utxo_sets VALUES(?, ?)", (obj.set_id, obj.balances))
+        self._db_con.commit()
+
     def get_tx_obj(self, object_id: str) -> "str | None":
-        result = self._db_cur.execute("SELECT tx_obj_str FROM transactions WHERE object_id = ?", (object_id,)).fetchone()
+        result = self._db_cur.execute("SELECT tx_obj_str FROM transactions WHERE object_id = ?",
+                                      (object_id,)).fetchone()
         return result[0] if result else None
 
     def _check_if_obj_in_db(self, object_id) -> bool:
@@ -109,6 +124,7 @@ class DbManager:
                 CREATE TABLE objects(object_id PRIMARY KEY, type);
                 CREATE TABLE blocks(id INTEGER PRIMARY KEY, object_id, block_obj_str, FOREIGN KEY (object_id) REFERENCES objects(object_id));
                 CREATE TABLE transactions(id INTEGER PRIMARY KEY, object_id, tx_obj_str, FOREIGN KEY (object_id) REFERENCES objects(object_id));
+                CREATE TABLE utxo_sets(id INTEGER PRIMARY KEY , set_id, utxo_set_sting);
                 COMMIT;
             """)
             self._db_con.commit()
