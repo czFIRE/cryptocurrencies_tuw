@@ -86,6 +86,7 @@ class DbManager:
             if obj.type == "block":
                 self._db_cur.execute("INSERT OR IGNORE INTO blocks VALUES(NULL, ?, ?)",
                                      (obj.object_id, mk_canonical_json_str(Block.to_json(obj))))  # type: ignore
+                log.debug(f"Transaction with id {obj.object_id} stored to DB")
             elif obj.type == "transaction":
                 self._db_cur.execute("INSERT OR IGNORE INTO transactions VALUES (NULL, ?, ?)",
                                      (obj.object_id, mk_canonical_json_str(Transaction.to_json(obj))))  # type: ignore
@@ -97,12 +98,12 @@ class DbManager:
         return not has_been_added
 
     def get_utxo_set(self, set_id: str) -> "UtxoSet|None":
-        result = self._db_cur.execute("SELECT tx_obj_str FROM utxo_sets WHERE set_id = ?",
+        result = self._db_cur.execute("SELECT utxo_set_string FROM utxo_sets WHERE set_id = ?",
                                       (set_id,)).fetchone()
         return result[0] if result else None
 
     def add_utxo_set(self, obj: UtxoSet) -> bool:
-        self._db_cur.execute("INSERT OR IGNORE INTO utxo_sets VALUES(?, ?)", (obj.set_id, obj.balances))
+        self._db_cur.execute("INSERT OR IGNORE INTO utxo_sets VALUES(NULL, ?, ?)", (obj.set_id, mk_canonical_json_str(obj.state)))
         self._db_con.commit()
 
     def get_tx_obj(self, object_id: str) -> "str | None":
@@ -124,7 +125,7 @@ class DbManager:
                 CREATE TABLE objects(object_id PRIMARY KEY, type);
                 CREATE TABLE blocks(id INTEGER PRIMARY KEY, object_id, block_obj_str, FOREIGN KEY (object_id) REFERENCES objects(object_id));
                 CREATE TABLE transactions(id INTEGER PRIMARY KEY, object_id, tx_obj_str, FOREIGN KEY (object_id) REFERENCES objects(object_id));
-                CREATE TABLE utxo_sets(id INTEGER PRIMARY KEY , set_id, utxo_set_sting);
+                CREATE TABLE utxo_sets(id INTEGER PRIMARY KEY , set_id, utxo_set_string);
                 COMMIT;
             """)
             self._db_con.commit()

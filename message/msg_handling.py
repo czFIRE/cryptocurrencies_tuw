@@ -8,6 +8,7 @@ import constants as const
 from asyncio import StreamWriter
 from message.msg_builder import serialize_msg
 from objects.Block import Block
+from objects.UtxoSet import UtxoSet
 from objects.Transaction import Transaction
 from peers.Peer import Peer
 from objects.obj_validation import validate_object
@@ -68,14 +69,20 @@ async def handle_object_msg(msg_dict: json, peer: Peer):
 
     match obj_dict["type"]:
         case "transaction":
+            log.debug(f"Handle Transaction message")
             obj = Transaction.load_from_json(obj_dict)
         case "block":
+            log.debug(f"Handle Block message")
             obj = Block.load_from_json(obj_dict)
         case _:
             raise ValueError("Unexpected object type")
 
     if not await validate_object(obj, peer):
         raise ValidationException()
+
+    if isinstance(obj, Block):
+        if not update_utxo_set(obj):
+            return
 
     if DB_MANAGER.add_object(obj):
         log.info(f"Stored new object with ID {obj.object_id} in DB")
@@ -84,9 +91,39 @@ async def handle_object_msg(msg_dict: json, peer: Peer):
         for writer in CONNECTIONS.values():
             await write_msg(writer, build.ihaveobject_msg(obj.object_id))
 
-        if isinstance(obj, Block):
-            # TODO update UTXO 
-            pass
+
+def update_utxo_set(block: Block) -> bool:
+    log.debug(f"Calculating new UTXO set for block {block}")
+    state = {}
+
+    if block.previd is not None:
+        log.debug(f"Load state for block {block.object_id}")
+        prev_utxo = UtxoSet.load_from_json(json.loads(DB_MANAGER.get_utxo_set(block.previd)))
+        log.debug(f"Loaded utxo for block {block.object_id}: {prev_utxo}")
+        if prev_utxo.state is not None:
+            state = prev_utxo.state
+        log.debug(f"Loaded state of block {block.object_id}: {state}")
+
+    for tx_id in block.txids:
+        transaction = Transaction.load_from_json(json.loads(DB_MANAGER.get_tx_obj(tx_id)))
+        if transaction.inputs is not None:
+            for tx_input in transaction.inputs:
+                input_tx_id = tx_input["outpoint"]["txid"]
+                input_tx_index = tx_input["outpoint"]["index"]
+                if state.get(input_tx_id)[input_tx_index] is None or \
+                        state.get(input_tx_id)[input_tx_index][
+                            "value"] == 0:  # Referenced transaction does not exist in state
+                    return False
+
+                state.get(input_tx_id)[input_tx_index]["value"] = 0  # Mark output as spent
+
+        state[tx_id] = transaction.outputs  # Add the outputs of the new transaction to the state
+
+    new_set = UtxoSet(block.object_id, state)
+
+    log.debug(f"Adding new UTXO set {new_set.set_id} with state {new_set.state} to DB")
+
+    return DB_MANAGER.add_utxo_set(new_set)
 
 
 async def handle_ihaveobject_msg(writer: StreamWriter, msg_dict: json, peer: Peer):

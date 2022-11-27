@@ -22,8 +22,9 @@ import time
 
 from peers.Peer import Peer
 
-#current_block_transactions: dict[Peer,list[str]] = {}
-#current_block_transactions: tuple[int, Block] = (0, Block([], "", "", 0, ""))
+
+# current_block_transactions: dict[Peer,list[str]] = {}
+# current_block_transactions: tuple[int, Block] = (0, Block([], "", "", 0, ""))
 
 async def write_msg(writer: StreamWriter, msg_dict: json):  # function copied from message.msg_handling.py
     msg_str = serialize_msg(msg_dict)
@@ -99,8 +100,8 @@ async def _validate_transaction(tx: Transaction, peer: Peer) -> bool:
 
                 return await validate_coinbase_transactions(txids) # TODO - what to add here?!?!?!?!?!?!?!?!?!?!??!?!?! Does this work?!?! - should now, but still scatchy 
         """
-
-        return True    # we can't check it's validity
+        log.debug("Coinbase transaction received")
+        return True  # we can't check it's validity
 
     # Normal Transaction
     return _validate_normal_transaction(tx)
@@ -127,11 +128,16 @@ async def request_missing_txs(txids: list[str]):
 async def validate_coinbase_transactions(txids: list[str]) -> bool:
     """ Check if the block has only one coinbase transaction and if so, if the rules for coinbase transactions apply """
 
-    first_tx = Transaction.load_from_json(DB_MANAGER.get_tx_obj(txids[0]))
+    log.debug("Validate Coinbase transactions")
 
-    # Loop rough all other transactions
+    first = DB_MANAGER.get_tx_obj(txids[0])
+    log.debug(f"Loaded first tx: {first}")
+    first_tx = Transaction.load_from_json(json.loads(first))
+
+    # Loop through all other transactions
+    log.debug("Checking other transactions")
     for tx in txids[1:]:
-        tmp = Transaction.load_from_json(DB_MANAGER.get_tx_obj(tx))
+        tmp = Transaction.load_from_json(json.loads(DB_MANAGER.get_tx_obj(tx)))
 
         # Only first transaction in list is allowed to be coinbase transaction
         if is_coinbase(tmp):
@@ -144,7 +150,9 @@ async def validate_coinbase_transactions(txids: list[str]) -> bool:
                 return False
 
     # Rules for coinbase transactions must be satisfied
+    log.debug("Check rules for coinbase transactions")
     if is_coinbase(first_tx):
+        log.debug("Calculate transaction fee for coinbase transaction")
         fee = await calculate_transaction_fees(txids)
         if not await validate_coinbase_transaction(first_tx, fee):
             return False
@@ -154,12 +162,17 @@ async def validate_coinbase_transactions(txids: list[str]) -> bool:
 
 async def calculate_transaction_fees(txids: list[str]) -> int:
     """ Calculate the transactions fees by subtracting the output sum from the input sum """
-    
+
+    if txids is None:
+        log.debug("No transactions present: calculated fee is 0")
+        return 0
+
     inputs = 0
     outputs = 0
 
     for tx in txids:
-        tmp = Transaction.load_from_json(DB_MANAGER.get_tx_obj(tx))
+        log.debug(f"Adding transaction {tx} to output/input sum")
+        tmp = Transaction.load_from_json(json.loads(DB_MANAGER.get_tx_obj(tx)))
 
         outputs += get_output_sum(tmp)
         inputs += get_input_sum(tmp)
@@ -169,6 +182,9 @@ async def calculate_transaction_fees(txids: list[str]) -> int:
 
 def get_output_sum(transaction: Transaction) -> int:
     """ Calculate the output sum for a transaction"""
+
+    if transaction.outputs is None:
+        return 0
 
     output_value = 0
     for out in transaction.outputs:
@@ -180,15 +196,19 @@ def get_output_sum(transaction: Transaction) -> int:
 def get_input_sum(transaction: Transaction) -> int:
     """ Calculate the input sum of a transaction by looking at the outputs of all referenced input transactions """
 
+    if transaction.inputs is None:
+        return 0
+
     input_sum = 0
     for tx_input in transaction.inputs:
         input_id = tx_input["outpoint"]["txid"]
         # TODO do we have all of these transactions?
-        tmp = Transaction.load_from_json(DB_MANAGER.get_tx_obj(input_id))
-        input_sum += tmp.outputs[int(tx_input["outpoint"]["index"])]["value"]  # TODO - I corrected this, check if this is correct 
-
-        # tx_input.outpoint.index
-        # tx.outputs[x].value
+        tmp = Transaction.load_from_json(json.loads(DB_MANAGER.get_tx_obj(input_id)))
+        log.debug("Getting output index")
+        output_index = int(tx_input["outpoint"]["index"])
+        log.debug(f"Output index is {output_index}")
+        input_sum += tmp.outputs[output_index]["value"]
+        log.debug(f"New input sum is {input_sum}")
 
     return input_sum
 
@@ -196,24 +216,32 @@ def get_input_sum(transaction: Transaction) -> int:
 async def validate_coinbase_transaction(transaction: Transaction, fee: int) -> bool:
     """ Check if a coinbase transaction satisfies all criteria """
 
+    log.debug("validate coinbase transaction")
+
     # coinbase transaction has no inputs
-    if len(transaction.inputs) > 0:
+    if transaction.inputs is not None:
+        log.debug("Coinbase transaction had inputs")
         return False
 
     # coinbase transaction has exactly one output
-    if len(transaction.outputs) != 1:
+    if transaction.outputs is None or len(transaction.outputs) != 1:
+        log.debug("Coinbase transaction had no outputs")
         return False
 
     # coinbase transaction has a height
-    if transaction.height is None:          # this is redundant - already check in is_coinbase
+    if transaction.height is None:  # this is redundant - already check in is_coinbase
+        log.debug("Coinbase transaction had no height")
         return False
 
     # The output of the coinbase transaction can be at most the sum of transaction fees in the block plus the
     # block reward 50*10^12
-    output_value = 50 * pow(10, 12) + get_output_sum(transaction)
+    fee = fee + 50 * pow(10, 12)
+    output_value = get_output_sum(transaction)
     if output_value > fee:
+        log.debug(f"Coinbase transaction output sum {output_value} is greater than fee {fee}")
         return False
 
+    log.debug("Coinbase transaction successfully validated")
     return True
 
 
@@ -224,10 +252,11 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
             f"Block target was {block.T} but expected {BLOCK_TARGET}")
         return False
 
+    # TODO: reactivate this with a correct working version
     # check proof of work - this should work since we are converting both to int
-    if (int(block.T, base=16) <= block.__hash__()):  # need to compare to the max number in target size - Do we?
-        log.error(f"Block hash {block.__hash__()} is bigger than target {int(block.T, base=16)}!")
-        return False
+    # if int(block.T, base=16) <= block.__hash__():  # need to compare to the max number in target size - Do we?
+    #    log.error(f"Block hash {block.__hash__()} is bigger than target {int(block.T, base=16)}!")
+    #    return False
 
     if block.created > time.time():
         log.error(f"Block creation time {block.created} is in the future (current time {time.time()})")
@@ -247,27 +276,27 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
     """
 
     if len(missing_tx_ids) > 0:
+        log.debug(f"Waiting for {missing_tx_ids} missing transactions")
         await request_missing_txs(missing_tx_ids)
 
     # TODO check if this is enough or this may still be too high? - ask on forums
     start_time = time.time()
     while time.time() - start_time < TRANSACTIONS_ASKING_TIMEOUT and len(missing_tx_ids) > 0:
         await asyncio.sleep(0.1)
-        missing_tx_ids = are_missing_txs(orig_missing_tx_ids) # can be optimalised by using missing_tx_ids
+        missing_tx_ids = are_missing_txs(orig_missing_tx_ids)  # can be optimalised by using missing_tx_ids
 
-    missing_tx_ids = are_missing_txs(orig_missing_tx_ids) # can be optimalised by using missing_tx_ids
+    missing_tx_ids = are_missing_txs(orig_missing_tx_ids)  # can be optimalised by using missing_tx_ids
     if len(missing_tx_ids) > 0:
         log.error(f"{len(missing_tx_ids)} transaction(s) couldn't be found!")
-        # TODO should we remove the added transactions from this block?
         # for tx in orig_missing_tx_ids:
         #    DB_MANAGER.remove_tx_obj(tx)
         return False
 
-    # still needed if we already had the coinbase transaction in our DB 
-    if not validate_coinbase_transactions(block.txids):
-        return False
+    log.debug("All transactions for block are here")
 
-    # check that there are no other coinbase transactions:
+    # still needed if we already had the coinbase transaction in our DB 
+    if not await validate_coinbase_transactions(block.txids):
+        return False
 
     return True
 
@@ -276,8 +305,10 @@ async def validate_object(obj: Type[Object], peer: Peer) -> bool:
     match obj:
         case Transaction():
             # noinspection PyTypeChecker
+            log.debug("Validating transaction")
             return await _validate_transaction(obj, peer)
         case Block():
+            log.debug("Validating block")
             return await _validate_block(obj, peer)
 
     return False
