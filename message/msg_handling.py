@@ -63,59 +63,33 @@ def handle_peers_msg(msg_dict: json):
 def handle_error_msg():
     raise ErrorMsgException()
 
-def del_connection(peer: Peer):
-    writer = CONNECTIONS.pop(peer, None)
-    if (writer is not None):
-        writer.close()
-    DB_MANAGER.remove_peer(peer)
+async def handle_object_msg(msg_dict: json, peer: Peer):    
+    obj_dict = msg_dict["object"]
 
-async def handle_object_msg(msg_dict: json, peer: Peer):
-    try:
-        obj_dict = msg_dict["object"]
+    match obj_dict["type"]:
+        case "transaction":
+            log.debug(f"Handle Transaction message")
+            obj = Transaction.load_from_json(obj_dict)
+        case "block":
+            log.debug(f"Handle Block message")
+            obj = Block.load_from_json(obj_dict)
+        case _:
+            raise ValueError("Unexpected object type")
 
-        match obj_dict["type"]:
-            case "transaction":
-                log.debug(f"Handle Transaction message")
-                obj = Transaction.load_from_json(obj_dict)
-            case "block":
-                log.debug(f"Handle Block message")
-                obj = Block.load_from_json(obj_dict)
-            case _:
-                raise ValueError("Unexpected object type")
+    if not await asyncio.create_task(validate_object(obj, peer)):
+        raise ValidationException()
 
-        if not await validate_object(obj, peer):
-            raise ValidationException()
+    if isinstance(obj, Block):
+        if not update_utxo_set(obj):
+            return
 
-        if isinstance(obj, Block):
-            if not update_utxo_set(obj):
-                return
-
-        if DB_MANAGER.add_object(obj):
-            log.info(f"Stored new object with ID {obj.object_id} in DB")
-            log.info(f"Gossip object with ID {obj.object_id} to the following peers: {list(CONNECTIONS.keys())}")
-            # Gossiping
-            for writer in CONNECTIONS.values():
-                await write_msg(writer, build.ihaveobject_msg(obj.object_id))
+    if DB_MANAGER.add_object(obj):
+        log.info(f"Stored new object with ID {obj.object_id} in DB")
+        log.info(f"Gossip object with ID {obj.object_id} to the following peers: {list(CONNECTIONS.keys())}")
+        # Gossiping
+        for writer in CONNECTIONS.values():
+            await write_msg(writer, build.ihaveobject_msg(obj.object_id))
     
-    
-    except ValidationException as e:
-        log.info(f"Object received from peer {peer} is invalid!")
-        log.debug(f"The object was: {msg_dict}")
-        try:
-            log.debug(f"Sending 'Error' message to {peer}")
-            await write_msg(writer, build.error_msg(str(e)))  # type: ignore
-            log.info(f"'Error' message send to {peer}")
-        except Exception as e:
-            log.error(f"Could not send 'Error' message to {peer}. Error: {e}")
-    except ValueError as e:
-        log.error(f"ValueError happened: ")
-        log.error(e)
-    
-    # TODO Exception for not being able to find missing TXs => Already in validationException
-    
-    except Exception as e:
-        raise e
-
 
 def update_utxo_set(block: Block) -> bool:
     log.debug(f"Calculating new UTXO set for block {block}")
@@ -168,7 +142,6 @@ async def handle_getobject_msg(writer: StreamWriter, msg_dict: json, peer: Peer)
     else:
         log.debug(f"Object requested by peer {peer} is not in the DB")
 
-
 async def handle_msg(writer: StreamWriter, msg_type: str, msg: json, peer: Peer):
     log.info(f"Handle message from peer {peer} with type {msg_type}")
     match msg_type:
@@ -182,13 +155,6 @@ async def handle_msg(writer: StreamWriter, msg_type: str, msg: json, peer: Peer)
             handle_error_msg()
         case 'object':
             await handle_object_msg(msg, peer)
-
-            #asyncio.run(handle_object_msg(msg, peer))
-
-            task = threading.Thread(target=asyncio.run, args=(handle_object_msg(msg, peer),))
-            task.start()
-            task.join()
-
         case 'ihaveobject':
             await handle_ihaveobject_msg(writer, msg, peer)
         case 'getobject':

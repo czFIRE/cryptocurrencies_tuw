@@ -2,6 +2,7 @@ import sqlite3
 import logging as log
 import json
 import os
+import threading
 from peers.Peer import Peer
 from objects.Object import Object
 from objects.Block import Block
@@ -11,6 +12,7 @@ from utils.json_builder import mk_canonical_json_str
 
 DB_PATH = "persist"
 
+db_lock = threading.Lock()
 
 class DbManager:
     def __init__(self):

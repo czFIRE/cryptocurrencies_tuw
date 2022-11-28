@@ -16,6 +16,7 @@ from jsonschema import ValidationError
 from json import JSONDecodeError
 from global_variables import CONNECTIONS, DB_MANAGER
 
+import concurrent.futures
 
 def add_connection(peer: Peer, writer: StreamWriter):
     CONNECTIONS[peer] = writer
@@ -65,9 +66,15 @@ async def handle_connection(reader: StreamReader, writer: StreamWriter):
             # TODO check that these changes make sense
             log.info(f"Received message from peer {peer} with type {msg_type}")
 
-            await handle_msg(writer, msg_type, msg, peer)
-            #thread = threading.Thread(target=asyncio.run, args=(handle_msg(writer, msg_type, msg, peer),))
-            #thread.start()
+            # await handle_msg(writer, msg_type, msg, peer)
+            await asyncio.create_task(handle_msg(writer, msg_type, msg, peer))
+
+            """
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, handle_msg(writer, msg_type, msg, peer))
+                if future.exception() is not None:
+                    raise future.exception()
+            """
 
     except asyncio.exceptions.TimeoutError:
         log.info(f"Peer {peer} timed out...")

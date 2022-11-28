@@ -42,7 +42,7 @@ async def _validate_normal_transaction(tx: Transaction) -> bool:
         prev_tx_str = DB_MANAGER.get_tx_obj(tx_id)
         if not prev_tx_str:
             await request_missing_txs([tx_id])
-            await asyncio.sleep(TRANSACTIONS_ASKING_TIMEOUT)
+            await asyncio.sleep(TRANSACTIONS_ASKING_TIMEOUT/4)
             prev_tx_str = DB_MANAGER.get_tx_obj(input["outpoint"]["txid"])
             if not prev_tx_str:
                 log.error(f"The transaction {tx_id} is missing in our DB!")
@@ -272,7 +272,7 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
         return True
 
     # Check if we are missing some transactions and request them if so
-    missing_tx_ids = are_missing_txs(reversed(block.txids))
+    missing_tx_ids = are_missing_txs(block.txids)
     orig_missing_tx_ids = copy.deepcopy(missing_tx_ids)
 
     """
@@ -283,12 +283,12 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
 
     if len(missing_tx_ids) > 0:
         log.debug(f"Waiting for {missing_tx_ids} missing transactions")
-        await request_missing_txs(missing_tx_ids)
+        await asyncio.create_task(request_missing_txs(missing_tx_ids))
 
     # TODO check if this is enough or this may still be too high? - ask on forums
     start_time = time.time()
     while time.time() - start_time < TRANSACTIONS_ASKING_TIMEOUT and len(missing_tx_ids) > 0:
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.25)
         missing_tx_ids = are_missing_txs(orig_missing_tx_ids)  # can be optimalised by using missing_tx_ids
 
     missing_tx_ids = are_missing_txs(orig_missing_tx_ids)  # can be optimalised by using missing_tx_ids
@@ -307,7 +307,7 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
     return True
 
 
-async def validate_object(obj: Type[Object], peer: Peer = Peer("",0)) -> bool:
+async def validate_object(obj: Type[Object], peer: Peer = Peer("",0), tried: bool = False) -> bool:
     match obj:
         case Transaction():
             # noinspection PyTypeChecker
