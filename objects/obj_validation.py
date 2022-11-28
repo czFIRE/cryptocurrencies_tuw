@@ -288,7 +288,7 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
     # TODO check if this is enough or this may still be too high? - ask on forums
     start_time = time.time()
     while time.time() - start_time < TRANSACTIONS_ASKING_TIMEOUT and len(missing_tx_ids) > 0:
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)
         missing_tx_ids = are_missing_txs(orig_missing_tx_ids)  # can be optimalised by using missing_tx_ids
 
     missing_tx_ids = are_missing_txs(orig_missing_tx_ids)  # can be optimalised by using missing_tx_ids
