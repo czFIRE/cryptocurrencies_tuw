@@ -145,3 +145,7 @@ kerma_peer_list.txt
 
 test.py
 test-client.py
+
+.vscode
+.vs
+.vscode/settings.json
