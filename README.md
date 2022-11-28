@@ -1,4 +1,6 @@
-# Byzantine Node - Group 01
+# Kool Node - Group 28
+
+Taken over the sample solution from Group 01. 
 
 ## Run
 
