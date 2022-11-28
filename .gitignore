@@ -143,6 +143,9 @@ kerma_peer_list.txt
 
 .DS_Store
 
+test.py
+test-client.py
+
 .vscode
 .vs
 .vscode/settings.json
