@@ -16,7 +16,6 @@ from global_variables import DB_MANAGER, CONNECTIONS
 from message.msg_exceptions import UnexpectedMsgException, ErrorMsgException
 from objects.obj_exceptions import ValidationException
 
-
 async def write_msg(writer: StreamWriter, msg_dict: json):
     msg_str = serialize_msg(msg_dict)
     writer.write(msg_str.encode("utf-8"))
@@ -113,7 +112,8 @@ def update_utxo_set(block: Block) -> bool:
                 if state.get(input_tx_id)[input_tx_index] is None or \
                         state.get(input_tx_id)[input_tx_index][
                             "value"] == 0:  # Referenced transaction does not exist in state
-                    return False
+                    
+                    return False # TODO - what the heck does this do? 
 
                 state.get(input_tx_id)[input_tx_index]["value"] = 0  # Mark output as spent
 

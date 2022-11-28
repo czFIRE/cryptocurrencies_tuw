@@ -103,8 +103,15 @@ class DbManager:
         return result[0] if result else None
 
     def add_utxo_set(self, obj: UtxoSet) -> bool:
-        self._db_cur.execute("INSERT OR IGNORE INTO utxo_sets VALUES(NULL, ?, ?)", (obj.set_id, mk_canonical_json_str(obj.state)))
-        self._db_con.commit()
+        has_been_added = self._check_if_obj_in_db(obj.set_id)
+
+        if not has_been_added:
+            self._db_cur.execute("INSERT OR IGNORE INTO utxo_sets VALUES(NULL, ?, ?)", (obj.set_id, mk_canonical_json_str(obj.state)))
+            self._db_con.commit()
+        else:
+            log.info(f"This UTXO set has already been computed and stored!")
+        
+        return True         # TODO - this won't work, but not needed for task 3
 
     def get_tx_obj(self, object_id: str) -> "str | None":
         result = self._db_cur.execute("SELECT tx_obj_str FROM transactions WHERE object_id = ?",
@@ -128,4 +135,7 @@ class DbManager:
                 CREATE TABLE utxo_sets(id INTEGER PRIMARY KEY , set_id, utxo_set_string);
                 COMMIT;
             """)
+
+            # TODO - redo the table for UTXO, we should store the foreign key to the block that is responsible for the state
+
             self._db_con.commit()

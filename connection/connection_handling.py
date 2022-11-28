@@ -1,5 +1,6 @@
 import asyncio
 import logging as log
+import threading
 import time
 
 import constants as const
@@ -64,7 +65,9 @@ async def handle_connection(reader: StreamReader, writer: StreamWriter):
             # TODO check that these changes make sense
             log.info(f"Received message from peer {peer} with type {msg_type}")
 
-            await handle_msg(writer, msg_type, msg, peer)  # type: ignore
+            await handle_msg(writer, msg_type, msg, peer)
+            #thread = threading.Thread(target=asyncio.run, args=(handle_msg(writer, msg_type, msg, peer),))
+            #thread.start()
 
     except asyncio.exceptions.TimeoutError:
         log.info(f"Peer {peer} timed out...")

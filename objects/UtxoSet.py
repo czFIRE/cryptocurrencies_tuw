@@ -11,7 +11,7 @@ from utils.json_builder import mk_canonical_json_str
 
 
 class UtxoSet:
-    def __init__(self, set_id: "str|None" = None, state: "dict|None" = None):
+    def __init__(self, set_id: str, state: "dict|None" = None):
         self.set_id = set_id
         self.state = state
 
