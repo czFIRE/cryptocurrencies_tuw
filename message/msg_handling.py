@@ -1,6 +1,7 @@
 import asyncio
 import json
 import ipaddress
+import threading
 import message.msg_builder as build
 import logging as log
 import constants as const
@@ -15,7 +16,6 @@ from objects.obj_validation import validate_object
 from global_variables import DB_MANAGER, CONNECTIONS
 from message.msg_exceptions import UnexpectedMsgException, ErrorMsgException
 from objects.obj_exceptions import ValidationException
-
 
 async def write_msg(writer: StreamWriter, msg_dict: json):
     msg_str = serialize_msg(msg_dict)
@@ -63,8 +63,7 @@ def handle_peers_msg(msg_dict: json):
 def handle_error_msg():
     raise ErrorMsgException()
 
-
-async def handle_object_msg(msg_dict: json, peer: Peer):
+async def handle_object_msg(msg_dict: json, peer: Peer):    
     obj_dict = msg_dict["object"]
 
     match obj_dict["type"]:
@@ -77,7 +76,7 @@ async def handle_object_msg(msg_dict: json, peer: Peer):
         case _:
             raise ValueError("Unexpected object type")
 
-    if not await validate_object(obj, peer):
+    if not await asyncio.create_task(validate_object(obj, peer)):
         raise ValidationException()
 
     if isinstance(obj, Block):
@@ -90,7 +89,7 @@ async def handle_object_msg(msg_dict: json, peer: Peer):
         # Gossiping
         for writer in CONNECTIONS.values():
             await write_msg(writer, build.ihaveobject_msg(obj.object_id))
-
+    
 
 def update_utxo_set(block: Block) -> bool:
     log.debug(f"Calculating new UTXO set for block {block}")
@@ -113,7 +112,8 @@ def update_utxo_set(block: Block) -> bool:
                 if state.get(input_tx_id)[input_tx_index] is None or \
                         state.get(input_tx_id)[input_tx_index][
                             "value"] == 0:  # Referenced transaction does not exist in state
-                    return False
+                    
+                    return False # TODO - what the heck does this do? 
 
                 state.get(input_tx_id)[input_tx_index]["value"] = 0  # Mark output as spent
 
@@ -141,7 +141,6 @@ async def handle_getobject_msg(writer: StreamWriter, msg_dict: json, peer: Peer)
         log.info(f"'Object' message send to {peer}")
     else:
         log.debug(f"Object requested by peer {peer} is not in the DB")
-
 
 async def handle_msg(writer: StreamWriter, msg_type: str, msg: json, peer: Peer):
     log.info(f"Handle message from peer {peer} with type {msg_type}")

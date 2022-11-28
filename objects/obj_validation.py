@@ -32,14 +32,21 @@ async def write_msg(writer: StreamWriter, msg_dict: json):  # function copied fr
     await writer.drain()
 
 
-def _validate_normal_transaction(tx: Transaction) -> bool:
+async def _validate_normal_transaction(tx: Transaction) -> bool:
     sum_inputs = 0
     # 2a) For each input, ...
     for input in tx.inputs:
         # 2a) ... ensure that a valid transaction with the given txid exists in your object database.
-        prev_tx_str = DB_MANAGER.get_tx_obj(input["outpoint"]["txid"])
+        tx_id: str = input["outpoint"]["txid"]
+        
+        prev_tx_str = DB_MANAGER.get_tx_obj(tx_id)
         if not prev_tx_str:
-            return False
+            await request_missing_txs([tx_id])
+            await asyncio.sleep(TRANSACTIONS_ASKING_TIMEOUT/4)
+            prev_tx_str = DB_MANAGER.get_tx_obj(input["outpoint"]["txid"])
+            if not prev_tx_str:
+                log.error(f"The transaction {tx_id} is missing in our DB!")
+                return False
 
         # 2a) ... ensure that the given index is less than the number of outputs in the outpoint transaction.
         index = input["outpoint"]["index"]
@@ -104,7 +111,7 @@ async def _validate_transaction(tx: Transaction, peer: Peer) -> bool:
         return True  # we can't check it's validity
 
     # Normal Transaction
-    return _validate_normal_transaction(tx)
+    return await _validate_normal_transaction(tx)
 
 
 def are_missing_txs(txids: list[str]) -> list[str]:
@@ -244,7 +251,6 @@ async def validate_coinbase_transaction(transaction: Transaction, fee: int) -> b
     log.debug("Coinbase transaction successfully validated")
     return True
 
-
 async def _validate_block(block: Block, peer: Peer) -> bool:
     # check that the target is the one required
     if block.T != BLOCK_TARGET:
@@ -254,11 +260,11 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
 
     # TODO: reactivate this with a correct working version
     # check proof of work - this should work since we are converting both to int
-    # if int(block.T, base=16) <= block.__hash__():  # need to compare to the max number in target size - Do we?
-    #    log.error(f"Block hash {block.__hash__()} is bigger than target {int(block.T, base=16)}!")
-    #    return False
+    if int(block.T, base=16) <= block.__hash__():  # need to compare to the max number in target size - Do we?
+        log.error(f"Block hash {block.__hash__()} is bigger than target {int(block.T, base=16)}!")
+        return False
 
-    if block.created > time.time():
+    if block.created > time.time() or block.created < 1624219079:   # TODO - we should be checking here for block.previd.created instead of this magical constant
         log.error(f"Block creation time {block.created} is in the future (current time {time.time()})")
         return False
 
@@ -266,7 +272,7 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
         return True
 
     # Check if we are missing some transactions and request them if so
-    missing_tx_ids = are_missing_txs(reversed(block.txids))
+    missing_tx_ids = are_missing_txs(block.txids)
     orig_missing_tx_ids = copy.deepcopy(missing_tx_ids)
 
     """
@@ -277,12 +283,12 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
 
     if len(missing_tx_ids) > 0:
         log.debug(f"Waiting for {missing_tx_ids} missing transactions")
-        await request_missing_txs(missing_tx_ids)
+        await asyncio.create_task(request_missing_txs(missing_tx_ids))
 
     # TODO check if this is enough or this may still be too high? - ask on forums
     start_time = time.time()
     while time.time() - start_time < TRANSACTIONS_ASKING_TIMEOUT and len(missing_tx_ids) > 0:
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.25)
         missing_tx_ids = are_missing_txs(orig_missing_tx_ids)  # can be optimalised by using missing_tx_ids
 
     missing_tx_ids = are_missing_txs(orig_missing_tx_ids)  # can be optimalised by using missing_tx_ids
@@ -301,7 +307,7 @@ async def _validate_block(block: Block, peer: Peer) -> bool:
     return True
 
 
-async def validate_object(obj: Type[Object], peer: Peer) -> bool:
+async def validate_object(obj: Type[Object], peer: Peer = Peer("",0), tried: bool = False) -> bool:
     match obj:
         case Transaction():
             # noinspection PyTypeChecker
@@ -312,3 +318,5 @@ async def validate_object(obj: Type[Object], peer: Peer) -> bool:
             return await _validate_block(obj, peer)
 
     return False
+
+

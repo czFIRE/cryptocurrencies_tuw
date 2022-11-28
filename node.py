@@ -50,7 +50,7 @@ async def main():
                 delta_peers = const.LOW_CONNECTION_THRESHOLD - len(CONNECTIONS)
                 if delta_peers > 0:
                     log.info(f"Too few connections available (currently {len(CONNECTIONS)})")
-                    resupply_connections(delta_peers)
+                    # resupply_connections(delta_peers) #TODO - maybe reenable?
 
                 await asyncio.sleep(const.SERVICE_LOOP_DELAY)
     except KeyboardInterrupt:
