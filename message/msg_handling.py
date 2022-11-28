@@ -1,6 +1,7 @@
 import asyncio
 import json
 import ipaddress
+import threading
 import message.msg_builder as build
 import logging as log
 import constants as const
@@ -155,7 +156,9 @@ async def handle_msg(writer: StreamWriter, msg_type: str, msg: json, peer: Peer)
         case 'error':
             handle_error_msg()
         case 'object':
-            await handle_object_msg(msg, peer)
+            # await handle_object_msg(msg, peer)
+            task = threading.Thread(target=asyncio.run, args=(handle_object_msg(msg, peer),))
+            task.start()
         case 'ihaveobject':
             await handle_ihaveobject_msg(writer, msg, peer)
         case 'getobject':

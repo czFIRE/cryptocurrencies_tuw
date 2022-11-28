@@ -38,8 +38,10 @@ async def _validate_normal_transaction(tx: Transaction) -> bool:
     for input in tx.inputs:
         # 2a) ... ensure that a valid transaction with the given txid exists in your object database.
         tx_id: str = input["outpoint"]["txid"]
+        
         prev_tx_str = DB_MANAGER.get_tx_obj(tx_id)
         if not prev_tx_str:
+            await request_missing_txs([tx_id])
             await asyncio.sleep(TRANSACTIONS_ASKING_TIMEOUT)
             prev_tx_str = DB_MANAGER.get_tx_obj(input["outpoint"]["txid"])
             if not prev_tx_str:
@@ -248,7 +250,6 @@ async def validate_coinbase_transaction(transaction: Transaction, fee: int) -> b
 
     log.debug("Coinbase transaction successfully validated")
     return True
-
 
 async def _validate_block(block: Block, peer: Peer) -> bool:
     # check that the target is the one required
