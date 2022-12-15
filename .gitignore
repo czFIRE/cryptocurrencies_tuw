@@ -149,3 +149,5 @@ test-client.py
 .vscode
 .vs
 .vscode/settings.json
+
+node_modules
