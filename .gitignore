@@ -150,4 +150,6 @@ test-client.py
 .vs
 .vscode/settings.json
 
-node_modules
+db/
+dist/
+node_modules/
