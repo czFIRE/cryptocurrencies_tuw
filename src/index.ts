@@ -8,7 +8,9 @@ logger.info(`Kool Node - Group 28`)
 logger.info(`Petr Kadlec, Florian Tesarek, Lea Haug Sandberg`)
 
 async function main() {
+  logger.info("Main start")
   network.init(BIND_PORT, BIND_IP)
+  logger.info("Main end")
 }
 
 main()
