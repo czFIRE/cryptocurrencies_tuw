@@ -14,6 +14,10 @@ const INVALID_HOSTS: string[] = [
     '8.8.8.8',
     '127.0.0.0',
     '127.0.0.1',
+    '127.0.0.2',
+    '127.0.0.3',
+    '127.0.0.4',
+    '127.0.0.5',
     'localhost'
 ]
 
@@ -23,6 +27,7 @@ class PeerManager {
     async load() {
         try {
             this.knownPeers = new Set(await db.get('peers'))
+            this.knownPeers.add(BOOTSTRAP_PEERS[0])
             logger.debug(`Loaded known peers: ${[...this.knownPeers]}`)
         } catch {
             logger.info(`Initializing peers database`)
