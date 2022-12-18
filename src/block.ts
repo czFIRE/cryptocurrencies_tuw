@@ -258,7 +258,7 @@ export class Block {
         let parentBlock: Block
         try {
             logger.debug(`Retrieving parent block of ${this.blockid} (${this.previd})`)
-            const parentObject = await objectManager.retrieve(this.previd, peer)
+            const parentObject = await objectManager.retrieve(this.previd, peer) // This requests the parent block from the peer, which we got this block from
 
             if (!BlockObject.guard(parentObject)) {
                 throw new Error(`Got parent of block ${this.blockid}, but it was not of BlockObject type; rejecting block.`)
