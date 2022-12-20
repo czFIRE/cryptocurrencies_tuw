@@ -23,7 +23,10 @@ import {
 
 import { Transaction } from './transaction'
 
-const OBJECT_AVAILABILITY_TIMEOUT = 5000 // ms
+import { network } from './network'
+
+
+const OBJECT_AVAILABILITY_TIMEOUT = 15000 // ms
 
 class ObjectManager {
     deferredObjects: { [key: string]: Deferred<ObjectType>[] } = {}
@@ -92,6 +95,13 @@ class ObjectManager {
         } catch (e) { }
 
         logger.debug(`Object ${objectid} not in database. Requesting it from peer ${peer.peerAddr}.`)
+
+        // Request parent block from all connected peers
+        network.broadcast({
+                type: 'getobject',
+                objectid: objectid
+            })
+
         await peer.sendGetObject(objectid)
 
         object = await Promise.race([
