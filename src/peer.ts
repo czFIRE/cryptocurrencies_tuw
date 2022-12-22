@@ -14,7 +14,9 @@ import {
     GetPeersMessageType,
     PeersMessageType,
     ChainTipMessageType,
-    GetChainTipMessageType
+    GetChainTipMessageType,
+    GetMempoolMessageType,
+    MempoolMessageType
 } from './message'
 
 import { network } from './network'
@@ -26,6 +28,7 @@ import {
 
 import { peerManager } from './peermanager'
 import { canonicalize } from 'json-canonicalize'
+import { Block } from './block'
 
 const VERSION = '0.8.0'
 const NAME = 'KOOL Node'
@@ -81,6 +84,23 @@ export class Peer {
         })
     }
 
+    // Task 4:
+
+    async sendGetChainTip() {
+        this.sendMessage({
+            type: 'getchaintip'
+        })
+    }
+
+    async sendChainTip(objid: ObjectId) {
+        this.sendMessage({
+            type: 'chaintip',
+            blockid: objid
+        })
+    }
+
+    //
+
     async sendError(err: string) {
         this.sendMessage({
             type: 'error',
@@ -111,6 +131,7 @@ export class Peer {
         this.active = true
         await this.sendHello()
         await this.sendGetPeers()
+        await this.sendGetChainTip()
     }
 
     async onMessage(message: string) {
@@ -228,6 +249,16 @@ export class Peer {
             return
         }
 
+        // Task 4
+        // TODO - check if correct
+        // here the block is valid, thus check if it is our longest chain:
+        if (msg.object.type === "block") {
+            const block: Block = await objectManager.get(objectid);
+
+            await network.updateChainTip(block);
+        }
+        //
+
         if (!known) {
             // gossip
             network.broadcast({
@@ -239,13 +270,36 @@ export class Peer {
 
     // Task 4 TODO
     async onMessageChainTip(msg: ChainTipMessageType) {
-        // TODO
+        const known = await objectManager.exists(msg.blockid);
+        
+        if (known) {
+            // if we have it we can try updating, probably redundant
+            const block: Block = await objectManager.get(msg.blockid);
+
+            if (block.valid) {
+                await network.updateChainTip(block);
+            }
+        } else {
+            // If we don't have the chaintip then get it
+            this.info(`Object ${msg.blockid} discovered`)
+            await this.sendGetObject(msg.blockid)
+        }
+    }
+
+    async onMessageGetMempool(msg: GetMempoolMessageType) {
+
+    }
+    //
+
+    async onMessageMempool(msg: MempoolMessageType) {
+
     }
 
     async onMessageGetChainTip(msg: GetChainTipMessageType) {
-        // TODO
+        const block = await network.getChainTip();
+
+        await this.sendChainTip(block.blockid);
     }
-    //
 
     async onMessageError(msg: ErrorMessageType) {
         this.warn(`Peer reported error: ${msg.error}`)

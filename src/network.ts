@@ -3,12 +3,24 @@ import { EventEmitter } from 'events'
 import { Peer } from './peer'
 import { peerManager } from './peermanager'
 import * as net from 'net'
+// Task 4:
+import { Block } from './block'
+
+import { Mutex } from 'async-mutex'
 
 class Network {
     peers: Peer[] = []
 
+    // Task 4
+    chaintip!: Block //= new Block(GENESIS.previd, GENESIS.txids, GENESIS.nonce, GENESIS.T, GENESIS.created, GENESIS.miner, GENESIS.note);
+    chaintipMutex: Mutex = new Mutex();
+    // 
+
     async init(bindPort: number, bindIP: string) {
         await peerManager.load()
+
+        // TODO - check if correct
+        this.chaintip = await Block.makeGenesis();
 
         const server = net.createServer(socket => {
             logger.info(`New connection from peer ${socket.remoteAddress}`)
@@ -45,6 +57,45 @@ class Network {
                 peer.sendMessage(obj) // intentionally delayed
             }
         }
+    }
+
+    async getChainTip(): Promise<Block> {
+        // this line is making sure we have this value
+        let retval = this.chaintip;
+        await this.chaintipMutex.runExclusive(() => {
+            retval = this.chaintip
+        });
+        // return after we know there wasn't anyone writing into the chaintip
+        return retval;
+    }
+
+    async updateChainTip(block: Block): Promise<boolean> {
+        if (block.height === undefined) {
+            // TODO: remove this ugly hack. This second check is just here because the height of the genesis block didn't seem to be set to 0 correctly - and nobody knows why :D
+            if(block.previd === null){
+                block.height = 0;
+                logger.debug(`Set block height to 0`);
+            }else{
+                logger.error(`This block doesn't have height: ${block.blockid}`);
+                return false;  
+            }
+        }
+
+        if (block.height < this.chaintip.height!) {
+            return false;
+        }
+
+        let retval = false;
+
+        await this.chaintipMutex.runExclusive(() => {
+            if (block.height! >= this.chaintip.height!) {
+                this.chaintip = block;
+                retval = true;
+                logger.info(`Chaintip updated to block ${block.blockid} with height ${block.height}`);
+            }
+        });
+
+        return retval;
     }
 }
 
