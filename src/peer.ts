@@ -14,7 +14,9 @@ import {
     GetPeersMessageType,
     PeersMessageType,
     ChainTipMessageType,
-    GetChainTipMessageType
+    GetChainTipMessageType,
+    GetMempoolMessageType,
+    MempoolMessageType
 } from './message'
 
 import { network } from './network'
@@ -129,6 +131,7 @@ export class Peer {
         this.active = true
         await this.sendHello()
         await this.sendGetPeers()
+        await this.sendGetChainTip()
     }
 
     async onMessage(message: string) {
@@ -283,12 +286,20 @@ export class Peer {
         }
     }
 
+    async onMessageGetMempool(msg: GetMempoolMessageType) {
+
+    }
+    //
+
+    async onMessageMempool(msg: MempoolMessageType) {
+
+    }
+
     async onMessageGetChainTip(msg: GetChainTipMessageType) {
         const block = await network.getChainTip();
 
         await this.sendChainTip(block.blockid);
     }
-    //
 
     async onMessageError(msg: ErrorMessageType) {
         this.warn(`Peer reported error: ${msg.error}`)

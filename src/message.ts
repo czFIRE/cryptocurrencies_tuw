@@ -119,6 +119,17 @@ export const ChainTipMessage = Record({
 export type ChainTipMessageType = Static<typeof ChainTipMessage>
 //
 
+export const GetMempoolMessage = Record({
+    type: Literal('getmempool'),
+})
+export type GetMempoolMessageType = Static<typeof GetMempoolMessage>
+
+export const MempoolMessage = Record({
+    type: Literal('mempool'),
+    txids: Array(String)
+})
+export type MempoolMessageType = Static<typeof MempoolMessage>
+
 export const ErrorMessage = Record({
     type: Literal('error'),
     error: String
