@@ -71,8 +71,14 @@ class Network {
 
     async updateChainTip(block: Block): Promise<boolean> {
         if (block.height === undefined) {
-            logger.error(`This block doesn't have height: ${block.blockid}`);
-            return false;
+            // TODO: remove this ugly hack. This second check is just here because the height of the genesis block didn't seem to be set to 0 correctly - and nobody knows why :D
+            if(block.previd === null){
+                block.height = 0;
+                logger.debug(`Set block height to 0`);
+            }else{
+                logger.error(`This block doesn't have height: ${block.blockid}`);
+                return false;  
+            }
         }
 
         if (block.height < this.chaintip.height!) {
