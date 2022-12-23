@@ -20,6 +20,7 @@ import { Deferred } from './promise'
 import { Transaction } from './transaction'
 import util from 'util'
 import { UTXOSet } from './utxo'
+import { network } from './network'
 
 const TARGET = '00000002af000000000000000000000000000000000000000000000000000000'
 export const GENESIS: BlockObjectType = {
@@ -366,6 +367,12 @@ export class Block {
 
             this.valid = true
             await this.save()
+
+            // Task 4
+            // TODO - check if correct
+            // here the block is valid, thus check if it is our longest chain:
+            await network.updateChainTip(this);
+            //
         } catch (e: any) {
             deferred.resolve(false)
             delete blockManager.deferredValidations[this.blockid]
@@ -385,7 +392,7 @@ export class Block {
             height: this.height,
             stateAfterOutpoints: Array.from(this.stateAfter.outpoints)
         })
-        logger.debug(`Stored valid block ${this.blockid} metadata.`)
+        logger.debug(`Stored valid block ${this.blockid} metadata with height: ${this.height} (valid: ${this.valid}).`)
     }
 
     async load() {
@@ -393,8 +400,9 @@ export class Block {
 
         const { height, stateAfterOutpoints } = await db.get(`blockinfo:${this.blockid}`)
 
-        logger.debug(`Block ${this.blockid} metadata loaded from database.`)
+        logger.debug(`Block ${this.blockid} metadata with height: ${this.height} loaded from database (valid: ${this.valid}).`)
 
+        // TODO - check this, this may be causing the deletion
         this.height = height
         this.stateAfter = new UTXOSet(new Set<string>(stateAfterOutpoints))
         this.valid = true

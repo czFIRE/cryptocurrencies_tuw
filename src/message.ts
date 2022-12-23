@@ -126,7 +126,7 @@ export type GetMempoolMessageType = Static<typeof GetMempoolMessage>
 
 export const MempoolMessage = Record({
     type: Literal('mempool'),
-    txids: Array(String)
+    txids: Array(Hash)
 })
 export type MempoolMessageType = Static<typeof MempoolMessage>
 
@@ -147,6 +147,8 @@ export const Messages = [
     GetChainTipMessage,
     ChainTipMessage,
     //
+    GetMempoolMessage,
+    MempoolMessage,
     ErrorMessage
 ]
 
@@ -161,6 +163,8 @@ export const Message = Union(
     GetChainTipMessage,
     ChainTipMessage,
     //
+    GetMempoolMessage,
+    MempoolMessage,
     ErrorMessage
 )
 

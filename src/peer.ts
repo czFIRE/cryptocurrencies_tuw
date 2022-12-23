@@ -175,6 +175,8 @@ export class Peer {
             this.onMessageGetChainTip.bind(this),
             this.onMessageChainTip.bind(this),
             //
+            this.onMessageGetMempool.bind(this),
+            this.onMessageMempool.bind(this),
             this.onMessageError.bind(this)
         )(msg)
     }
@@ -248,16 +250,6 @@ export class Peer {
             this.sendError(`Received invalid object: ${e.message}`)
             return
         }
-
-        // Task 4
-        // TODO - check if correct
-        // here the block is valid, thus check if it is our longest chain:
-        if (msg.object.type === "block") {
-            const block: Block = await objectManager.get(objectid);
-
-            await network.updateChainTip(block);
-        }
-        //
 
         if (!known) {
             // gossip

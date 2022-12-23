@@ -4,7 +4,7 @@ import isValidHostname from 'is-valid-hostname'
 
 // TODO - Add the bootstrap node here - to be sure it works
 const BOOTSTRAP_PEERS: string[] = [
-    '128.130.122.101:18018'
+    //'128.130.122.101:18018'
 ]
 
 const INVALID_HOSTS: string[] = [
