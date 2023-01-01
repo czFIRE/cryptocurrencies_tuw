@@ -308,6 +308,23 @@ export class Block {
             }
             logger.debug(`Block proof-of-work for ${this.blockid} is valid`)
 
+            // Task 5: Check note field
+            if (this.note) {
+                if (this.note.length > 128 || this.note.charCodeAt(0) < 32 || this.note.charCodeAt(0) > 126) {
+                    throw new Error(`Block ${this.blockid} with note ${this.note} is not valid`)
+                }
+            }
+            logger.debug(`Block note for ${this.blockid} is valid`)
+
+            // Task 5: Check miner field
+            if (this.miner) {
+              if (this.miner.length > 128 || this.miner.charCodeAt(0) < 32 || this.miner.charCodeAt(0) > 126) {
+                  throw new Error(`Block ${this.blockid} with miner ${this.miner} is not valid`)
+              }
+            }
+            logger.debug(`Block miner for ${this.blockid} is valid`)
+
+
             let parentBlock: Block | null = null
             let stateBefore: UTXOSet | undefined
 

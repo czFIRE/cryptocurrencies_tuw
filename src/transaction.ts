@@ -160,6 +160,8 @@ export class Transaction {
             return
         }
 
+        // Task 5: Ensure that a transaction does not have multiple inputs that have the same outpoint.
+        // Already implemented
         const inputValues = await Promise.all(
             this.inputs.map(async (input, i) => {
                 const prevOutput = await input.outpoint.resolve()
