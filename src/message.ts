@@ -105,8 +105,6 @@ export const ObjectMessage = Record({
 export type ObjectMessageType = Static<typeof ObjectMessage>
 
 // Task 4:
-
-// TODO Add chain tip, getchain tip - check if this is correct!!!
 export const GetChainTipMessage = Record({
     type: Literal('getchaintip'),
 })

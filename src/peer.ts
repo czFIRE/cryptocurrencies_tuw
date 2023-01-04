@@ -171,7 +171,7 @@ export class Peer {
             this.onMessageIHaveObject.bind(this),
             this.onMessageGetObject.bind(this),
             this.onMessageObject.bind(this),
-            // Task 4 - TODO check if correct
+            // Task 4
             this.onMessageGetChainTip.bind(this),
             this.onMessageChainTip.bind(this),
             //
@@ -260,7 +260,7 @@ export class Peer {
         }
     }
 
-    // Task 4 TODO
+    // Task 4
     async onMessageChainTip(msg: ChainTipMessageType) {
         const known = await objectManager.exists(msg.blockid);
         

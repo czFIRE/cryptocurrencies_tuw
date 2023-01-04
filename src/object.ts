@@ -76,8 +76,6 @@ class ObjectManager {
         )(object)
     }
 
-    // TODO - looks promising that we don't have to implement object fetching
-    // TODO - if doing it recursively - do we wanna increase the timeout?
     async retrieve(objectid: ObjectId, peer: Peer): Promise<ObjectType> {
         logger.debug(`Retrieving object ${objectid}`)
         let object: ObjectType

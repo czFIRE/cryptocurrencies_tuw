@@ -20,6 +20,8 @@ import {
     objectManager
 } from './object'
 
+import { Hash } from 'crypto'
+
 export class Output {
     pubkey: PublicKey
     value: number
@@ -162,9 +164,18 @@ export class Transaction {
 
         // Task 5: Ensure that a transaction does not have multiple inputs that have the same outpoint.
         // Already implemented
+
+        const outpointsSet: Array<string> = []
+
         const inputValues = await Promise.all(
             this.inputs.map(async (input, i) => {
                 const prevOutput = await input.outpoint.resolve()
+
+                if (outpointsSet.some(x => x === input.outpoint.txid)) {
+                    throw new Error(`Multiple inputs with the same outpoint ${input.outpoint.txid} of transaction ${this.txid}`)
+                }
+
+                outpointsSet.push(input.outpoint.txid)
 
                 if (input.sig === null) {
                     throw new Error(`No signature available for input ${i} of transaction ${this.txid}`)

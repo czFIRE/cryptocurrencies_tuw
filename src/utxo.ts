@@ -5,7 +5,6 @@ import { Outpoint, Transaction } from './transaction'
 
 export type UTXO = Set<string>
 
-// TODO check if this works when doing the longest chain and recursive fetching
 export class UTXOSet {
     outpoints: UTXO = new Set<string>()
 

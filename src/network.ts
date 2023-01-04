@@ -12,14 +12,13 @@ class Network {
     peers: Peer[] = []
 
     // Task 4
-    chaintip!: Block //= new Block(GENESIS.previd, GENESIS.txids, GENESIS.nonce, GENESIS.T, GENESIS.created, GENESIS.miner, GENESIS.note);
+    chaintip!: Block
     chaintipMutex: Mutex = new Mutex();
     // 
 
     async init(bindPort: number, bindIP: string) {
         await peerManager.load()
 
-        // TODO - check if correct
         this.chaintip = await Block.makeGenesis();
 
         const server = net.createServer(socket => {
@@ -71,7 +70,7 @@ class Network {
 
     async updateChainTip(block: Block): Promise<boolean> {
         if (block.height === undefined) {
-            // TODO: remove this ugly hack. This second check is just here because the height of the genesis block didn't seem to be set to 0 correctly - and nobody knows why :D
+            //remove this ugly hack. This second check is just here because the height of the genesis block didn't seem to be set to 0 correctly - and nobody knows why :D
             if(block.previd === null){
                 block.height = 0;
                 logger.debug(`Set block height to 0`);

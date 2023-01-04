@@ -310,7 +310,8 @@ export class Block {
 
             // Task 5: Check note field
             if (this.note) {
-                if (this.note.length > 128 || this.note.charCodeAt(0) < 32 || this.note.charCodeAt(0) > 126) {
+                const note = [...this.note]
+                if (this.note.length > 128 || !note.every(char => char.charCodeAt(0) >= 32 && char.charCodeAt(0) <= 126)) {
                     throw new Error(`Block ${this.blockid} with note ${this.note} is not valid`)
                 }
             }
@@ -318,9 +319,10 @@ export class Block {
 
             // Task 5: Check miner field
             if (this.miner) {
-              if (this.miner.length > 128 || this.miner.charCodeAt(0) < 32 || this.miner.charCodeAt(0) > 126) {
-                  throw new Error(`Block ${this.blockid} with miner ${this.miner} is not valid`)
-              }
+                const miner = [...this.miner]
+                if (this.miner.length > 128 || !miner.every(char => char.charCodeAt(0) >= 32 && char.charCodeAt(0) <= 126)) {
+                    throw new Error(`Block ${this.blockid} with miner ${this.miner} is not valid`)
+                }
             }
             logger.debug(`Block miner for ${this.blockid} is valid`)
 
@@ -357,7 +359,6 @@ export class Block {
                         + `block ${this.blockid} created at ${this.created}.`)
                 }
 
-                // TODO - check the time here, does it work => they probably tried the grader on the master solution, but it worked even though it shouldn't have
                 const currentUNIXtimestamp = Math.floor(new Date().getTime() / 1000)
                 if (this.created > currentUNIXtimestamp) {
                     throw new Error(`Block ${this.blockid} has a timestamp ${this.created} in the future. `
@@ -386,7 +387,6 @@ export class Block {
             await this.save()
 
             // Task 4
-            // TODO - check if correct
             // here the block is valid, thus check if it is our longest chain:
             await network.updateChainTip(this);
             //
@@ -419,7 +419,6 @@ export class Block {
 
         logger.debug(`Block ${this.blockid} metadata with height: ${this.height} loaded from database (valid: ${this.valid}).`)
 
-        // TODO - check this, this may be causing the deletion
         this.height = height
         this.stateAfter = new UTXOSet(new Set<string>(stateAfterOutpoints))
         this.valid = true
