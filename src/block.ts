@@ -311,7 +311,7 @@ export class Block {
             // Task 5: Check note field
             if (this.note) {
                 const note = [...this.note]
-                if (this.note.length > 128 || !note.every(char => char.charCodeAt(0) >= 32 && char.charCodeAt(0) <= 126)) {
+                if (this.note.length > 128 || note.some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) > 126)) {
                     throw new Error(`Block ${this.blockid} with note ${this.note} is not valid`)
                 }
             }
@@ -320,7 +320,7 @@ export class Block {
             // Task 5: Check miner field
             if (this.miner) {
                 const miner = [...this.miner]
-                if (this.miner.length > 128 || !miner.every(char => char.charCodeAt(0) >= 32 && char.charCodeAt(0) <= 126)) {
+                if (this.miner.length > 128 || miner.some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) > 126)) {
                     throw new Error(`Block ${this.blockid} with miner ${this.miner} is not valid`)
                 }
             }
