@@ -7,7 +7,7 @@ import * as net from 'net'
 import { Block } from './block'
 
 import { Mutex } from 'async-mutex'
-import { ObjectId } from './object'
+import { ObjectId, objectManager } from './object'
 import { Transaction } from './transaction'
 import { UTXOSet } from './utxo'
 
@@ -117,6 +117,25 @@ class Network {
             // 
 
             // TODO check if now any of the transactions from the mempool aren't invalid with the UTXO
+            let new_mempool: Array<ObjectId> = [];
+            
+            await this.mempoolMutex.runExclusive(async () => {
+                for (let txid in this.mempool) {
+                    const tx: Transaction = await objectManager.get(txid);
+    
+                    try {
+                        this.mempoolUTXO.apply(tx)
+    
+                        new_mempool.push(txid)
+                    } catch (error) {
+                        // TODO I guess this is fine?
+                    }
+                }
+
+                this.mempool = new_mempool;
+            })
+
+
         }
 
         return retval;
