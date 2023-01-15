@@ -7,6 +7,7 @@ import * as net from 'net'
 import { Block } from './block'
 
 import { Mutex } from 'async-mutex'
+import { ObjectId } from './object'
 
 class Network {
     peers: Peer[] = []
@@ -15,6 +16,11 @@ class Network {
     chaintip!: Block
     chaintipMutex: Mutex = new Mutex();
     // 
+
+    // Task 5
+    mempool: Array<ObjectId> = [] // set of transactions 
+    mempoolMutex: Mutex = new Mutex();
+    // TODO
 
     async init(bindPort: number, bindIP: string) {
         await peerManager.load()
@@ -91,11 +97,48 @@ class Network {
                 this.chaintip = block;
                 retval = true;
                 logger.info(`Chaintip updated to block ${block.blockid} with height ${block.height}`);
+
+                // Task 5.2
+                // Task 5.6
+                // TODO update the mempool here after each chaintip update
             }
         });
 
         return retval;
     }
+
+    // Task 5:
+    async getMempool(): Promise<Array<ObjectId>> {
+        let retval = this.mempool;
+        
+        await this.mempoolMutex.runExclusive(() => {
+            retval = this.mempool;
+        })
+        
+        return retval;
+    }
+
+    async updateMempool(txids: Array<ObjectId>): Promise<Boolean> {
+        let retval = false;
+        
+        await this.mempoolMutex.runExclusive(() => {
+            for (const txid in txids) { // could be simply done with concat, but I don't know if we want that
+                if (! this.mempool.includes(txid)) {
+                    retval = true;
+                    this.mempool.push(txid);
+                }
+            }
+        })
+
+        return retval;
+    }
+
+    async reorganiseMempool(): Promise<Boolean> {
+        // Task 5.6 TODO
+        return false;
+    }
+
+    //
 }
 
 export class MessageSocket extends EventEmitter {

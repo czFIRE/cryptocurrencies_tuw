@@ -21,6 +21,7 @@ import {
 } from './object'
 
 import { Hash } from 'crypto'
+import { network } from './network'
 
 export class Output {
     pubkey: PublicKey
@@ -159,6 +160,10 @@ export class Transaction {
                 throw new Error(`Invalid coinbase transaction ${this.txid}. Coinbase must have only a single output.`)
             }
             this.fees = 0
+
+            // Task 5:
+            // TODO also add to UTXO here
+
             return
         }
 
@@ -209,6 +214,13 @@ export class Transaction {
         this.fees = sumInputs - sumOutputs
         logger.debug(`Transaction ${this.txid} pays fees ${this.fees}`)
         logger.debug(`Transaction ${this.txid} is valid`)
+
+        // Task 5.5:
+        // TODO Check that the Transaction is valid with respect to our mempool and UTXO
+
+        // TODO Mempool adding
+
+        network.updateMempool([this.txid])
     }
 
     inputsUnsigned() {

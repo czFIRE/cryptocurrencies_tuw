@@ -101,6 +101,23 @@ export class Peer {
 
     //
 
+    // Task 5:
+    
+    async sendGetMempool() {
+        this.sendMessage({
+            type: 'getmempool'
+        })
+    }
+
+    async sendMempool(txids: Array<ObjectId>) {
+        this.sendMessage({
+            type: 'mempool',
+            txids: txids
+        })
+    }
+
+    // 
+
     async sendError(err: string) {
         this.sendMessage({
             type: 'error',
@@ -132,6 +149,8 @@ export class Peer {
         await this.sendHello()
         await this.sendGetPeers()
         await this.sendGetChainTip()
+        // Task 5.3
+        await this.sendGetMempool()
     }
 
     async onMessage(message: string) {
@@ -274,17 +293,8 @@ export class Peer {
         } else {
             // If we don't have the chaintip then get it
             this.info(`Object ${msg.blockid} discovered`)
-            await this.sendGetObject(msg.blockid)
+            await this.sendGetObject(msg.blockid);
         }
-    }
-
-    async onMessageGetMempool(msg: GetMempoolMessageType) {
-
-    }
-    //
-
-    async onMessageMempool(msg: MempoolMessageType) {
-
     }
 
     async onMessageGetChainTip(msg: GetChainTipMessageType) {
@@ -292,6 +302,28 @@ export class Peer {
 
         await this.sendChainTip(block.blockid);
     }
+    //
+
+    // Task 5
+    async onMessageGetMempool(msg: GetMempoolMessageType) {
+        await this.sendMempool([]) // TODO add the sending
+    }
+    
+
+    async onMessageMempool(msg: MempoolMessageType) {
+        // Task 5.4
+        // Get all the Transactions if we don't have them
+
+        for (const txid in msg.txids) {
+            const known = await objectManager.exists(txid);
+
+            if (!known) {
+                this.info(`Asking for mempool transaction ${txid}`);
+                await this.sendGetObject(txid);
+            }
+        }
+    }
+    //
 
     async onMessageError(msg: ErrorMessageType) {
         this.warn(`Peer reported error: ${msg.error}`)
