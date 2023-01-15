@@ -306,7 +306,9 @@ export class Peer {
 
     // Task 5
     async onMessageGetMempool(msg: GetMempoolMessageType) {
-        await this.sendMempool([]) // TODO add the sending
+        const mempool = await network.getMempool()
+        
+        await this.sendMempool(mempool);
     }
     
 

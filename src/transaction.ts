@@ -161,9 +161,6 @@ export class Transaction {
             }
             this.fees = 0
 
-            // Task 5:
-            // TODO also add to UTXO here
-
             return
         }
 
@@ -211,16 +208,13 @@ export class Transaction {
             throw new Error(`Transaction ${this.txid} does not respect the Law of Conservation. Inputs summed to ${sumInputs}, while outputs summed to ${sumOutputs}.`)
         }
 
+        // Task 5.5:
+        network.addToMempool(this); // throws error if invalid, so should be fine?
+        //
+
         this.fees = sumInputs - sumOutputs
         logger.debug(`Transaction ${this.txid} pays fees ${this.fees}`)
         logger.debug(`Transaction ${this.txid} is valid`)
-
-        // Task 5.5:
-        // TODO Check that the Transaction is valid with respect to our mempool and UTXO
-
-        // TODO Mempool adding
-
-        network.updateMempool([this.txid])
     }
 
     inputsUnsigned() {

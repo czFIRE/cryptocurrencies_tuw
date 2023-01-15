@@ -8,6 +8,8 @@ import { Block } from './block'
 
 import { Mutex } from 'async-mutex'
 import { ObjectId } from './object'
+import { Transaction } from './transaction'
+import { UTXOSet } from './utxo'
 
 class Network {
     peers: Peer[] = []
@@ -19,6 +21,7 @@ class Network {
 
     // Task 5
     mempool: Array<ObjectId> = [] // set of transactions 
+    mempoolUTXO: UTXOSet = new UTXOSet(new Set<string>())
     mempoolMutex: Mutex = new Mutex();
     // TODO
 
@@ -77,12 +80,12 @@ class Network {
     async updateChainTip(block: Block): Promise<boolean> {
         if (block.height === undefined) {
             //remove this ugly hack. This second check is just here because the height of the genesis block didn't seem to be set to 0 correctly - and nobody knows why :D
-            if(block.previd === null){
+            if (block.previd === null) {
                 block.height = 0;
                 logger.debug(`Set block height to 0`);
-            }else{
+            } else {
                 logger.error(`This block doesn't have height: ${block.blockid}`);
-                return false;  
+                return false;
             }
         }
 
@@ -97,12 +100,24 @@ class Network {
                 this.chaintip = block;
                 retval = true;
                 logger.info(`Chaintip updated to block ${block.blockid} with height ${block.height}`);
-
-                // Task 5.2
-                // Task 5.6
-                // TODO update the mempool here after each chaintip update
             }
         });
+
+        if (retval) {
+            await this.mempoolMutex.runExclusive(() => {
+                if (block.stateAfter !== undefined) {
+                    this.mempoolUTXO = block.stateAfter?.copy()
+                }
+            })
+
+            // Task 5.6
+            // removing those that are in the block
+            // TODO TODO don't we want here to get all the TXIDS from the UTXO set this block has?
+            await network.removeFromMempool(block.txids)
+            // 
+
+            // TODO check if now any of the transactions from the mempool aren't invalid with the UTXO
+        }
 
         return retval;
     }
@@ -110,31 +125,43 @@ class Network {
     // Task 5:
     async getMempool(): Promise<Array<ObjectId>> {
         let retval = this.mempool;
-        
+
         await this.mempoolMutex.runExclusive(() => {
             retval = this.mempool;
         })
-        
+
         return retval;
     }
 
-    async updateMempool(txids: Array<ObjectId>): Promise<Boolean> {
+    async addToMempool(tx: Transaction): Promise<Boolean> {
         let retval = false;
-        
+
         await this.mempoolMutex.runExclusive(() => {
-            for (const txid in txids) { // could be simply done with concat, but I don't know if we want that
-                if (! this.mempool.includes(txid)) {
-                    retval = true;
-                    this.mempool.push(txid);
-                }
+            if (!this.mempool.includes(tx.txid)) {
+                this.mempoolUTXO.apply(tx) // can throw error
+
+                retval = true;
+                this.mempool.push(tx.txid);
             }
         })
 
         return retval;
     }
 
+    async removeFromMempool(txids: Array<ObjectId>): Promise<Boolean> {
+        let retval = false;
+
+        await this.mempoolMutex.runExclusive(() => {
+            const mempoolLength = this.mempool.length
+            this.mempool = this.mempool.filter(txid => !txids.includes(txid))
+            retval = this.mempool.length < mempoolLength
+        })
+
+        return retval;
+    }
+
     async reorganiseMempool(): Promise<Boolean> {
-        // Task 5.6 TODO
+        // Task 5.7 TODO
         return false;
     }
 

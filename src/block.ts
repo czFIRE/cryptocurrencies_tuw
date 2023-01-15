@@ -388,8 +388,9 @@ export class Block {
 
             // Task 4
             // here the block is valid, thus check if it is our longest chain:
-            await network.updateChainTip(this);
+            const updated = await network.updateChainTip(this);
             //
+
         } catch (e: any) {
             deferred.resolve(false)
             delete blockManager.deferredValidations[this.blockid]
