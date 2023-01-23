@@ -124,7 +124,7 @@ class Network {
                     const tx: Transaction = await objectManager.get(txid);
     
                     try {
-                        this.mempoolUTXO.apply(tx)
+                        this.mempoolUTXO.applyMultiple([tx])
     
                         new_mempool.push(txid)
                     } catch (error) {
@@ -152,15 +152,18 @@ class Network {
         return retval;
     }
 
-    async addToMempool(tx: Transaction): Promise<Boolean> {
-        let retval = false;
+    async addToMempool(tx: Transaction): Promise<null|any> {
+        let retval = null;
 
         await this.mempoolMutex.runExclusive(() => {
             if (!this.mempool.includes(tx.txid)) {
-                this.mempoolUTXO.apply(tx) // can throw error
+                try {
+                    this.mempoolUTXO.applyMultiple([tx]) // can throw error
 
-                retval = true;
-                this.mempool.push(tx.txid);
+                    this.mempool.push(tx.txid);
+                } catch (error: any) {
+                    retval = error.message;
+                }
             }
         })
 

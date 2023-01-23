@@ -209,7 +209,10 @@ export class Transaction {
         }
 
         // Task 5.5:
-        network.addToMempool(this); // throws error if invalid, so should be fine?
+        const val = await network.addToMempool(this); // throws error if invalid, so should be fine?
+        if (val !== null) {
+            throw new Error(`Got this error: ${val}`)
+        }
         //
 
         this.fees = sumInputs - sumOutputs
