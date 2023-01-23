@@ -124,7 +124,7 @@ class Network {
                     const tx: Transaction = await objectManager.get(txid);
     
                     try {
-                        this.mempoolUTXO.applyMultiple([tx])
+                        this.mempoolUTXO.apply(tx)
     
                         new_mempool.push(txid)
                     } catch (error) {
@@ -158,7 +158,7 @@ class Network {
         await this.mempoolMutex.runExclusive(() => {
             if (!this.mempool.includes(tx.txid)) {
                 try {
-                    this.mempoolUTXO.applyMultiple([tx]) // can throw error
+                    this.mempoolUTXO.apply(tx) // can throw error
 
                     this.mempool.push(tx.txid);
                 } catch (error: any) {

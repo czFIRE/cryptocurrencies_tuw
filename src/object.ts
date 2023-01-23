@@ -26,7 +26,7 @@ import { Transaction } from './transaction'
 import { network } from './network'
 
 
-const OBJECT_AVAILABILITY_TIMEOUT = 15000 // ms
+const OBJECT_AVAILABILITY_TIMEOUT = 30000 // ms
 
 class ObjectManager {
     deferredObjects: { [key: string]: Deferred<ObjectType>[] } = {}
